@@ -1,4 +1,4 @@
-module github.com/pfnet-research/k8s-cluster-simulator
+module github.com/elchead/k8s-cluster-simulator
 
 go 1.18
 
