@@ -3,6 +3,7 @@ package jobparser
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -12,10 +13,11 @@ func TestLoadCsv(t *testing.T) {
 "2022-05-11 08:00:00",21571718826.5,3524325375.5,54965999615.5,,,,,,,16074645503.5,22920224426.5,,,,`)
 	podmemories := ParsePodMemories(file)
 	assert.Equal(t, "o10n-worker-l-jbmbp-qsjc6", podmemories[0].Name)
-	assert.Equal(t, "2022-05-11 08:00:00", podmemories[0].Records[0].Time)
+	assert.Equal(t, time.Date(2022, 5, 11, 8, 0, 0, 0, time.UTC), podmemories[0].Records[0].Time)
 	assert.Equal(t, 21571718826.5, podmemories[0].Records[0].Usage)
 
-	assert.Equal(t, "2022-05-11 08:00:00", podmemories[1].Records[0].Time)
+	assert.Equal(t, time.Date(2022, 5, 11, 8, 0, 0, 0, time.UTC), podmemories[1].Records[0].Time)
+
 	assert.Equal(t, "o10n-worker-l-f88p8-z9hwl", podmemories[1].Name)
 	assert.Equal(t, 3524325375.5, podmemories[1].Records[0].Usage)
 }

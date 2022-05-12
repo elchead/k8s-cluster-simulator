@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type PodMemory struct {
@@ -14,7 +15,7 @@ type PodMemory struct {
 }
 
 type Record struct {
-	Time  string
+	Time  time.Time
 	Usage float64
 }
 
@@ -30,13 +31,14 @@ func ParsePodMemories(f io.Reader) []PodMemory {
 }
 
 func parse(records [][]string) []PodMemory {
-
 	header := records[0]
-	// omit time column
 	res := initNamesForPodMemories(header)
 	for timeIdx, line := range records {
+		time, err := parseTime(line[0])
 		if timeIdx > 0 { // omit header line
-			time := line[0]
+			if err != nil {
+				log.Fatal(err)
+			}
 			for podIdx, strmem := range line[1:] {
 				mem, _ := strconv.ParseFloat(strmem, 64)
 				res[podIdx].Records = append(res[podIdx].Records, Record{Time: time, Usage: mem})
@@ -46,6 +48,13 @@ func parse(records [][]string) []PodMemory {
 	}
 	return res
 
+}
+
+// assume UTC
+func parseTime(timestr string) (time.Time, error) {
+	convertedTimeFormat := strings.Replace(timestr, " ", "T", 1) + "Z"
+	time, err := time.Parse(time.RFC3339, convertedTimeFormat)
+	return time, err
 }
 
 func initNamesForPodMemories(header []string) []PodMemory {

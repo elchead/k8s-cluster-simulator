@@ -340,5 +340,5 @@ Please see each file for more detail.
 [build-link]:  http://travis-ci.com/pfnet-research/k8s-cluster-simulator
 [cov-image]:   https://coveralls.io/repos/github/pfnet-research/k8s-cluster-simulator/badge.svg?branch=master
 [cov-link]:    https://coveralls.io/github/pfnet-research/k8s-cluster-simulator?branch=master
-[godoc-image]: https://godoc.org/github.com/pfnet-research/k8s-cluster-simulator/pkg?status.svg
-[godoc-link]:  https://godoc.org/github.com/pfnet-research/k8s-cluster-simulator/pkg
+[godoc-image]: https://godoc.org/github.com/elchead/k8s-cluster-simulator/pkg?status.svg
+[godoc-link]:  https://godoc.org/github.com/elchead/k8s-cluster-simulator/pkg
