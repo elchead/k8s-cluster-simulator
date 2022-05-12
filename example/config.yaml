@@ -8,7 +8,8 @@ tick: 10
 
 # Start time at which the simulation starts, in RFC3339 format.
 # Optional (default: now)
-startClock: 2019-01-01T00:00:00+09:00
+startClock: 2022-05-11T08:00:00Z 
+#2019-01-01T00:00:00+09:00
 
 # Interval duration for logging metrics of the cluster, in seconds.
 # Optional (default: same as tick)
@@ -21,19 +22,17 @@ metricsTick: 60
 metricsLogger:
 - dest: stdout
   formatter: table
-- dest: kubesim.log
+- dest: mysim.log
   formatter: JSON
-- dest: kubesim-hr.log
+- dest: mysim-hr.log
   formatter: humanReadable
 
 # Write configuration of each node.
 cluster:
 - metadata:
-    name: node-0
+    name: zone2
     labels:
       beta.kubernetes.io/os: simulated
-    annotations:
-      foo: bar
   spec:
     unschedulable: false
     # taints:
@@ -42,12 +41,11 @@ cluster:
     #   effect: NoSchedule
   status:
     allocatable:
-      cpu: 4
-      memory: 8Gi
-      nvidia.com/gpu: 1
-      pods: 2
+      cpu: 120
+      memory: 450Gi
+      # pods: 2
 - metadata:
-    name: node-1
+    name: zone3
     labels:
       beta.kubernetes.io/os: simulated
     # annotations:
@@ -56,7 +54,5 @@ cluster:
     # taints:
   status:
     allocatable:
-      cpu: 8
-      memory: 16Gi
-      nvidia.com/gpu: 2
-      pods: 4
+      cpu: 120
+      memory: 450Gi

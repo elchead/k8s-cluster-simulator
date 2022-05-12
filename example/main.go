@@ -52,15 +52,17 @@ var rootCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := newInterruptableContext()
-
 		// 1. Create a KubeSim with a pod queue and a scheduler.
 		queue := queue.NewPriorityQueue()
 		sched := buildScheduler() // see below
 		kubesim := kubesim.NewKubeSimFromConfigPathOrDie(configPath, queue, sched)
 
 		// 2. Register one or more pod submitters to KubeSim.
-		numOfSubmittingPods := 8
-		kubesim.AddSubmitter("MySubmitter", newMySubmitter(numOfSubmittingPods))
+		file, err := os.Open("./test.csv")
+		if err != nil {
+			log.L.Fatal("Failed to read pod file:", err)
+		}
+		kubesim.AddSubmitter("JobSubmitter", newJobSubmitter(file))
 
 		// 3. Run the main loop of KubeSim.
 		//    In each execution of the loop, KubeSim
