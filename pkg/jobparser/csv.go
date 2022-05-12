@@ -43,7 +43,7 @@ func ParsePodMemories(f io.Reader) []PodMemory {
 
 	data, err := csvReader.ReadAll()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to read csv:", err)
 	}
 	res := parse(data)
 	valid := make([]PodMemory, 0, len(res))
@@ -62,10 +62,10 @@ func parse(records [][]string) []PodMemory {
 	header := records[0]
 	res := initNamesForPodMemories(header)
 	for timeIdx, line := range records {
-		time, err := parseTime(line[0])
 		if timeIdx > 0 { // omit header line
+			time, err := parseTime(line[0])
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal("Failed to parse time:", line[0], err)
 			}
 			for podIdx, strmem := range line[1:] {
 				mem, _ := strconv.ParseFloat(strmem, 64)

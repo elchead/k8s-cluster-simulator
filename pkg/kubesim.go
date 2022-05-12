@@ -128,7 +128,7 @@ func NewKubeSimFromConfigPathOrDie(
 
 	kubesim, err := NewKubeSimFromConfigPath(confPath, queue, sched)
 	if err != nil {
-		log.L.Fatal(err)
+		log.L.Fatal("Config failed: ", err)
 	}
 
 	return kubesim
