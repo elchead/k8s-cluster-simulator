@@ -2,6 +2,7 @@ package jobparser
 
 import (
 	"encoding/csv"
+	"fmt"
 	"io"
 	"log"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 type PodMemory struct {
 	Name    string
 	Records []Record
+	StartAt time.Time
 }
 
 type Record struct {
@@ -19,6 +21,15 @@ type Record struct {
 	Usage float64
 }
 
+func SetStartTime(pod *PodMemory) error {
+	for _, record := range pod.Records {
+		if record.Usage != 0. {
+			pod.StartAt = record.Time
+			return nil
+		}
+	}
+	return fmt.Errorf("no start time found for pod %s", pod.Name)
+}
 func ParsePodMemories(f io.Reader) []PodMemory {
 	csvReader := csv.NewReader(f)
 	csvReader.LazyQuotes = true

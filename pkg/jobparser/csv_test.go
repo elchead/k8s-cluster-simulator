@@ -21,3 +21,18 @@ func TestLoadCsv(t *testing.T) {
 	assert.Equal(t, "o10n-worker-l-f88p8-z9hwl", podmemories[1].Name)
 	assert.Equal(t, 3524325375.5, podmemories[1].Records[0].Usage)
 }
+
+func TestGetStartTime(t *testing.T) {
+	now := time.Now()
+	t.Run("find start time", func(t *testing.T) {
+		podmem := PodMemory{Name: "w1", Records: []Record{{Time: now, Usage: 0}, {Time: now.Add(2 * time.Minute), Usage: 0}, {Time: now.Add(4 * time.Minute), Usage: 1e2}}}
+		err := SetStartTime(&podmem)
+		assert.NoError(t, err)
+		assert.Equal(t, now.Add(4*time.Minute), podmem.StartAt)
+	})
+	t.Run("no start time", func(t *testing.T) {
+		podmem := PodMemory{Name: "w1", Records: []Record{{Time: now, Usage: 0}, {Time: now.Add(2 * time.Minute), Usage: 0}, {Time: now.Add(4 * time.Minute), Usage: 0}}}
+		err := SetStartTime(&podmem)
+		assert.Error(t, err)
+	})
+}
