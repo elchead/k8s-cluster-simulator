@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,12 @@ type PodMemory struct {
 type Record struct {
 	Time  time.Time
 	Usage float64
+}
+
+func SortPodMemoriesByTime(podMemory []PodMemory) {
+	sort.Slice(podMemory, func(i, j int) bool {
+		return podMemory[i].StartAt.Before(podMemory[j].StartAt)
+	})
 }
 
 func SetStartTime(pod *PodMemory) error {
@@ -38,7 +45,17 @@ func ParsePodMemories(f io.Reader) []PodMemory {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return parse(data)
+	res := parse(data)
+	valid := make([]PodMemory, 0, len(res))
+	for i, _ := range res {
+		err := SetStartTime(&res[i])
+		if err != nil {
+			log.Println("Removing pod because:", err)
+		} else {
+			valid = append(valid, res[i])
+		}
+	}
+	return valid
 }
 
 func parse(records [][]string) []PodMemory {
