@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"io"
 	"log"
+	"strings"
 )
 
 type PodMemory struct {
@@ -28,8 +29,9 @@ func ParsePodMemories(f io.Reader) []PodMemory {
 func parse(records [][]string) []PodMemory {
 	header := records[0]
 	res := make([]PodMemory, 0, len(header))
-	for i, name := range header {
+	for i, title := range header {
 		if i > 0 { // omit time column
+			name := extractPodName(title)
 			res = append(res, PodMemory{Name: name})
 		}
 	}
@@ -42,5 +44,5 @@ func parse(records [][]string) []PodMemory {
 }
 
 func extractPodName(header string) string {
-
+	return strings.Split(header, " ")[0]
 }
