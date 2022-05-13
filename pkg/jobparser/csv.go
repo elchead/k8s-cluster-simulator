@@ -22,9 +22,9 @@ type Record struct {
 	Usage float64
 }
 
-func SortPodMemoriesByTimeReverse(podMemory []PodMemory) {
+func SortPodMemoriesByTime(podMemory []PodMemory) {
 	sort.Slice(podMemory, func(i, j int) bool {
-		return podMemory[j].StartAt.Before(podMemory[i].StartAt)
+		return podMemory[i].StartAt.Before(podMemory[j].StartAt)
 	})
 }
 
@@ -55,7 +55,7 @@ func ParsePodMemories(f io.Reader) []PodMemory {
 			valid = append(valid, res[i])
 		}
 	}
-	SortPodMemoriesByTimeReverse(valid)
+	SortPodMemoriesByTime(valid)
 	return valid
 }
 
