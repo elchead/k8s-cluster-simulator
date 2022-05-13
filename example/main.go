@@ -24,8 +24,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
-	"k8s.io/kubernetes/pkg/scheduler/algorithm/priorities"
 
 	kubesim "github.com/elchead/k8s-cluster-simulator/pkg"
 	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
@@ -82,32 +80,32 @@ func buildScheduler() scheduler.Scheduler {
 	sched := scheduler.NewGenericScheduler( /* preemption enabled */ true)
 
 	// 2. Register extender(s)
-	sched.AddExtender(
-		scheduler.Extender{
-			Name:             "MyExtender",
-			Filter:           filterExtender,
-			Prioritize:       prioritizeExtender,
-			Weight:           1,
-			NodeCacheCapable: true,
-		},
-	)
+	// sched.AddExtender(
+	// 	scheduler.Extender{
+	// 		Name:             "MyExtender",
+	// 		Filter:           filterExtender,
+	// 		Prioritize:       prioritizeExtender,
+	// 		Weight:           1,
+	// 		NodeCacheCapable: true,
+	// 	},
+	// )
 
-	// 2. Register plugin(s)
-	// Predicate
-	sched.AddPredicate("GeneralPredicates", predicates.GeneralPredicates)
-	// Prioritizer
-	sched.AddPrioritizer(priorities.PriorityConfig{
-		Name:   "BalancedResourceAllocation",
-		Map:    priorities.BalancedResourceAllocationMap,
-		Reduce: nil,
-		Weight: 1,
-	})
-	sched.AddPrioritizer(priorities.PriorityConfig{
-		Name:   "LeastRequested",
-		Map:    priorities.LeastRequestedPriorityMap,
-		Reduce: nil,
-		Weight: 1,
-	})
+	// // 2. Register plugin(s)
+	// // Predicate
+	// sched.AddPredicate("GeneralPredicates", predicates.GeneralPredicates)
+	// // Prioritizer
+	// sched.AddPrioritizer(priorities.PriorityConfig{
+	// 	Name:   "BalancedResourceAllocation",
+	// 	Map:    priorities.BalancedResourceAllocationMap,
+	// 	Reduce: nil,
+	// 	Weight: 1,
+	// })
+	// sched.AddPrioritizer(priorities.PriorityConfig{
+	// 	Name:   "LeastRequested",
+	// 	Map:    priorities.LeastRequestedPriorityMap,
+	// 	Reduce: nil,
+	// 	Weight: 1,
+	// })
 
 	return &sched
 }
