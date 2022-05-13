@@ -34,6 +34,16 @@ func TestSubmitJobWhenTime(t *testing.T) {
 		assertSubmitEvent(t, events[0], "j1")
 		assertTerminateEvent(t, events[1])
 	})
+	t.Run("do not submit job when not yet time", func(t *testing.T) {
+		sut := jobparser.NewJobSubmitter(jobs)
+		simTime := clock.NewClock(now.Add(-5. * time.Second))
+		events, err := sut.Submit(simTime, nil, nil)
+		assert.NoError(t, err)
+
+		assert.Equal(t, 0, len(events))
+		// assertSubmitEvent(t, events[0], "j1")
+		// assertTerminateEvent(t, events[1])
+	})
 }
 
 func assertSubmitEvent(t testing.TB, event submitter.Event, podName string) {

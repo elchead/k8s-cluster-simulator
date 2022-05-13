@@ -40,15 +40,14 @@ func CreatePod(podinfo PodMemory) *v1.Pod {
 		// 			Image: "container",
 		// 			Resources: v1.ResourceRequirements{
 		// 				Requests: v1.ResourceList{
-		// 					"cpu":            resource.MustParse("4"),
-		// 					"memory":         resource.MustParse("4Gi"),
-		// 					"nvidia.com/gpu": resource.MustParse("1"),
+		// 					"cpu":    resource.MustParse(cpu),
+		// 					"memory": resource.MustParse("4Gi"),
 		// 				},
-		// 				Limits: v1.ResourceList{
-		// 					"cpu":            resource.MustParse("6"),
-		// 					"memory":         resource.MustParse("6Gi"),
-		// 					"nvidia.com/gpu": resource.MustParse("1"),
-		// 				},
+		// 				// Limits: v1.ResourceList{
+		// 				// 	"cpu":            resource.MustParse("6"),
+		// 				// 	"memory":         resource.MustParse("6Gi"),
+		// 				// 	"nvidia.com/gpu": resource.MustParse("1"),
+		// 				// },
 		// 			},
 		// 		},
 		// 	},
