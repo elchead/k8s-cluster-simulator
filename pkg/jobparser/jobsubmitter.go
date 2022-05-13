@@ -35,7 +35,6 @@ func NewJobSubmitter(jobs []PodMemory) *JobSubmitter {
 
 func NewJobSubmitterFromFile(podMemCsvFile io.Reader) *JobSubmitter {
 	podmems := ParsePodMemories(podMemCsvFile)
-	SortPodMemoriesByTime(podmems)
 	return NewJobSubmitter(podmems)
 }
 

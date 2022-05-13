@@ -46,7 +46,7 @@ func TestGetStartTime(t *testing.T) {
 func TestSortPods(t *testing.T) {
 	now := time.Now()
 	podmems := []PodMemory{{Name: "last", StartAt: now.Add(10 * time.Minute)}, {Name: "first", StartAt: now}, {Name: "middle", StartAt: now.Add(5 * time.Minute)}}
-	SortPodMemoriesByTime(podmems)
-	assert.Equal(t, "first", podmems[0].Name)
-	assert.Equal(t, "last", podmems[2].Name)
+	SortPodMemoriesByTimeReverse(podmems)
+	assert.Equal(t, "first", podmems[2].Name)
+	assert.Equal(t, "last", podmems[0].Name)
 }
