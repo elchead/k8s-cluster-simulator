@@ -43,7 +43,7 @@ cluster:
     allocatable:
       cpu: 120
       memory: 450Gi
-      # pods: 2
+      pods: 1000 #important
 - metadata:
     name: zone3
     labels:
@@ -56,3 +56,4 @@ cluster:
     allocatable:
       cpu: 120
       memory: 450Gi
+      pods: 1000
