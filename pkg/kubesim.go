@@ -111,7 +111,7 @@ func NewKubeSimFromConfigPath(
 	confPath string, queue queue.PodQueue, sched scheduler.Scheduler,
 ) (*KubeSim, error) {
 
-	conf, err := readConfig(confPath)
+	conf, err := ReadConfig(confPath)
 	if err != nil {
 		return nil, errors.Errorf("Error reading config: %s", err.Error())
 	}
@@ -204,8 +204,8 @@ func (k *KubeSim) List() ([]*v1.Node, error) {
 	return nodes, nil
 }
 
-// readConfig reads and parses a config from the path (excluding file extension).
-func readConfig(path string) (*config.Config, error) {
+// ReadConfig reads and parses a config from the path (excluding file extension).
+func ReadConfig(path string) (*config.Config, error) {
 	viper.SetConfigName(path)
 	viper.AddConfigPath(".")
 

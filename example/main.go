@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/containerd/containerd/log"
 	"github.com/pkg/errors"
@@ -55,23 +56,31 @@ var rootCmd = &cobra.Command{
 		// 1. Create a KubeSim with a pod queue and a scheduler.
 		queue := queue.NewPriorityQueue()
 		sched := buildScheduler() // see below
-		kubesim := kubesim.NewKubeSimFromConfigPathOrDie(configPath, queue, sched)
+		sim := kubesim.NewKubeSimFromConfigPathOrDie(configPath, queue, sched)
 
+		conf, _ := kubesim.ReadConfig(configPath)
+		// fmt.Println("STARTTIME:", conf.StartClock)
+		startTime, _ := time.Parse(time.RFC3339, conf.StartClock)
+		endTime := startTime.Add(4 * time.Hour)
+		// fmt.Println("ENDTIME:", endTime)
 		// 2. Register one or more pod submitters to KubeSim.
 		file, err := os.Open("./test.csv")
 		if err != nil {
 			log.L.Fatal("Failed to read pod file:", err)
 		}
-		submitter := jobparser.NewJobSubmitterFromFile(file)
-		kubesim.AddSubmitter("JobSubmitter", submitter)
 
+		jobs := jobparser.ParsePodMemories(file)
+
+		submitter := jobparser.NewJobSubmitter(jobs)
+		sim.AddSubmitter("JobSubmitter", submitter)
+		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
 		// 3. Run the main loop of KubeSim.
 		//    In each execution of the loop, KubeSim
 		//      1) stores pods submitted from the registered submitters to its queue,
 		//      2) invokes scheduler with pending pods and cluster state,
 		//      3) emits cluster metrics to designated location(s) if enabled
 		//      4) progresses the simulated clock
-		if err := kubesim.Run(ctx); err != nil && errors.Cause(err) != context.Canceled {
+		if err := sim.Run(ctx); err != nil && errors.Cause(err) != context.Canceled {
 			log.L.Fatal(err)
 		}
 	},
