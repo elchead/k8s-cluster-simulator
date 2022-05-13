@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -15,9 +14,8 @@ func TestCreatePodsFromJobCSV(t *testing.T) {
 	podmems := jobparser.ParsePodMemories(f)
 	for _, pod := range podmems {
 		spec := jobparser.CreatePod(pod)
-		fmt.Println(spec)
+		assert.NotEmpty(t, spec.ObjectMeta.Name)
 
 	}
-	assert.True(t, false)
-
+	assert.NotEmpty(t, podmems)
 }
