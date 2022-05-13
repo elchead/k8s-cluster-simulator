@@ -28,6 +28,7 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/algorithm/priorities"
 
 	kubesim "github.com/elchead/k8s-cluster-simulator/pkg"
+	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
 	"github.com/elchead/k8s-cluster-simulator/pkg/queue"
 	"github.com/elchead/k8s-cluster-simulator/pkg/scheduler"
 )
@@ -62,7 +63,7 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.L.Fatal("Failed to read pod file:", err)
 		}
-		kubesim.AddSubmitter("JobSubmitter", newJobSubmitter(file))
+		kubesim.AddSubmitter("JobSubmitter", jobparser.NewJobSubmitterFromFile(file))
 
 		// 3. Run the main loop of KubeSim.
 		//    In each execution of the loop, KubeSim

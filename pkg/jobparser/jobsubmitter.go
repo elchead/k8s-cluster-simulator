@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package jobparser
 
 import (
 	"io"
@@ -20,23 +20,26 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/algorithm"
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
-	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
 	"github.com/elchead/k8s-cluster-simulator/pkg/metrics"
 	"github.com/elchead/k8s-cluster-simulator/pkg/submitter"
 )
 
-type jobSubmitter struct {
-	jobs       []jobparser.PodMemory
+type JobSubmitter struct {
+	jobs       []PodMemory
 	currentIdx int
 }
 
-func newJobSubmitter(podMemCsvFile io.Reader) *jobSubmitter {
-	podmems := jobparser.ParsePodMemories(podMemCsvFile)
-	jobparser.SortPodMemoriesByTime(podmems)
-	return &jobSubmitter{jobs: podmems, currentIdx: 0}
+func NewJobSubmitter(jobs []PodMemory) *JobSubmitter {
+	return &JobSubmitter{jobs: jobs, currentIdx: 0}
 }
 
-func (s *jobSubmitter) Submit(
+func NewJobSubmitterFromFile(podMemCsvFile io.Reader) *JobSubmitter {
+	podmems := ParsePodMemories(podMemCsvFile)
+	SortPodMemoriesByTime(podmems)
+	return NewJobSubmitter(podmems)
+}
+
+func (s *JobSubmitter) Submit(
 	currentTime clock.Clock,
 	_ algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error) {
@@ -44,8 +47,9 @@ func (s *jobSubmitter) Submit(
 	nextJob := s.jobs[s.currentIdx]
 
 	events := make([]submitter.Event, 0, len(s.jobs))
-	for currentTime.Before(clock.NewClock(nextJob.StartAt)) {
-		pod := jobparser.CreatePod(nextJob)
+	jobTime := clock.NewClock(nextJob.StartAt)
+	for jobTime.BeforeOrEqual(currentTime) {
+		pod := CreatePod(nextJob)
 		events = append(events, &submitter.SubmitEvent{Pod: pod})
 		s.currentIdx++
 		if s.currentIdx == len(s.jobs) {

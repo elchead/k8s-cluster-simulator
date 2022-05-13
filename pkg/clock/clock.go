@@ -57,6 +57,10 @@ func (c Clock) Before(rhs Clock) bool {
 	return c.inner.Before(&rhs.inner)
 }
 
+func (c Clock) BeforeOrEqual(rhs Clock) bool {
+	return c.inner.Before(&rhs.inner) || c.inner.Equal(&rhs.inner)
+}
+
 // String implements Stringer interface.
 func (c Clock) String() string {
 	return c.inner.String()
