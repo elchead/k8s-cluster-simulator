@@ -24,13 +24,42 @@ import (
 	"github.com/elchead/k8s-cluster-simulator/pkg/submitter"
 )
 
+type Iterator struct {
+	jobs    []PodMemory
+	current int
+}
+
+func (it *Iterator) RemainingValues() int {
+	return len(it.jobs) - it.current
+}
+
+func (it *Iterator) Value() interface{} {
+	if it.current == len(it.jobs) {
+		return nil
+	}
+	return it.jobs[it.current]
+}
+
+func (it *Iterator) Next() interface{} {
+	if it.current == len(it.jobs) {
+		return nil
+	}
+	it.current++
+	return it.Value()
+}
+
+func NewIterator(jobs []PodMemory) *Iterator {
+	return &Iterator{jobs, 0}
+}
+
 type JobSubmitter struct {
 	jobs       []PodMemory
 	currentIdx int
+	iterator   *Iterator
 }
 
 func NewJobSubmitter(jobs []PodMemory) *JobSubmitter {
-	return &JobSubmitter{jobs: jobs, currentIdx: 0}
+	return &JobSubmitter{jobs: jobs, currentIdx: 0, iterator: NewIterator(jobs)}
 }
 
 func NewJobSubmitterFromFile(podMemCsvFile io.Reader) *JobSubmitter {
@@ -43,30 +72,26 @@ func (s *JobSubmitter) Submit(
 	_ algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error) {
 
-	nextJob := s.jobs[s.currentIdx]
+	events := make([]submitter.Event, 0, s.iterator.RemainingValues()+1)
+	nextJob, ok := s.iterator.Value().(PodMemory)
+	if !ok {
+		return events, nil
 
-	events := make([]submitter.Event, 0, len(s.jobs))
+	}
+
 	jobTime := clock.NewClock(nextJob.StartAt)
 	for jobTime.BeforeOrEqual(currentTime) {
 		pod := CreatePod(nextJob)
 		events = append(events, &submitter.SubmitEvent{Pod: pod})
-		s.currentIdx++
-		if s.currentIdx == len(s.jobs) {
+
+		nextJob, ok = s.iterator.Next().(PodMemory)
+		if !ok {
 			break
 		}
-		nextJob = s.jobs[s.currentIdx]
+		jobTime = clock.NewClock(nextJob.StartAt)
 	}
 
-	// if s.podIdx > 0 { // Test deleting previously submitted pod
-	// 	podName := fmt.Sprintf("pod-%d", s.podIdx-1)
-	// 	events = append(events, &submitter.DeleteEvent{PodNamespace: "default", PodName: podName})
-	// }
-
-	// for i := 0; i < submissionNum; i++ {
-	// 	s.podIdx++
-	// }
-
-	if s.currentIdx == len(s.jobs) {
+	if s.iterator.RemainingValues() == 0 {
 		events = append(events, &submitter.TerminateSubmitterEvent{})
 	}
 

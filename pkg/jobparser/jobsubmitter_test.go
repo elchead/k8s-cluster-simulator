@@ -39,22 +39,37 @@ func TestSubmitJobWhenTime(t *testing.T) {
 		simTime := clock.NewClock(now.Add(-5. * time.Second))
 		events, err := sut.Submit(simTime, nil, nil)
 		assert.NoError(t, err)
-
-		assert.Equal(t, 0, len(events))
-		// assertSubmitEvent(t, events[0], "j1")
-		// assertTerminateEvent(t, events[1])
+		assert.Empty(t, events)
 	})
-	t.Run("remove job from submitter once submitted", func(t *testing.T) {
+	t.Run("remove jobs from submitter once submitted", func(t *testing.T) {
+		jobs := []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
 		sut := jobparser.NewJobSubmitter(jobs)
 		simTime := clock.NewClock(now)
-		_, err := sut.Submit(simTime, nil, nil)
-		assert.NoError(t, err)
 		events, err := sut.Submit(simTime, nil, nil)
+		assert.Equal(t, 3, len(events))
+		assertSubmitEvent(t, events[0], "j1")
+		assertTerminateEvent(t, events[2])
 		assert.NoError(t, err)
-		assert.Equal(t, 0, len(events))
-		// assert.False(t, isTerminateEvent(events[0]))
-		// fmt.Printf("+%v", events)
+
+		events, err = sut.Submit(simTime, nil, nil)
+		assert.NoError(t, err)
+		assert.Empty(t, events)
 	})
+}
+
+func TestIterator(t *testing.T) {
+	now := time.Now()
+	jobs := []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}, {Time: now.Add(1 * time.Hour), Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}, {Time: now.Add(1 * time.Hour), Usage: 100.}}}}
+	sut := jobparser.NewIterator(jobs)
+	val := sut.Value()
+	assert.Equal(t, 2, sut.RemainingValues())
+	assert.Equal(t, jobs[0], val)
+	val = sut.Next()
+	assert.Equal(t, 1, sut.RemainingValues())
+	assert.Equal(t, jobs[1], val)
+	val = sut.Next()
+	assert.Equal(t, 0, sut.RemainingValues())
+	assert.Equal(t, val, nil)
 }
 
 func assertSubmitEvent(t testing.TB, event submitter.Event, podName string) {
