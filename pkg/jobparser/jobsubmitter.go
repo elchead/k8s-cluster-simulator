@@ -33,19 +33,26 @@ func (it *Iterator) RemainingValues() int {
 	return len(it.jobs) - it.current
 }
 
-func (it *Iterator) Value() interface{} {
-	if it.current == len(it.jobs) {
-		return nil
-	}
+func (it *Iterator) Value() PodMemory {
 	return it.jobs[it.current]
 }
 
-func (it *Iterator) Next() interface{} {
-	if it.current == len(it.jobs) {
-		return nil
+func (it *Iterator) Next() bool {
+	if it.current >= len(it.jobs)-1 {
+		it.current = len(it.jobs)
+		return false
+	} else {
+		it.current++
+		return true
 	}
-	it.current++
-	return it.Value()
+}
+
+func (it *Iterator) ExistNext() bool {
+	if it.current == len(it.jobs) {
+		return false
+	} else {
+		return true
+	}
 }
 
 func NewIterator(jobs []PodMemory) *Iterator {
@@ -73,22 +80,21 @@ func (s *JobSubmitter) Submit(
 	met metrics.Metrics) ([]submitter.Event, error) {
 
 	events := make([]submitter.Event, 0, s.iterator.RemainingValues()+1)
-	nextJob, ok := s.iterator.Value().(PodMemory)
-	if !ok {
+	if !s.iterator.ExistNext() {
+		events = append(events, &submitter.TerminateSubmitterEvent{})
 		return events, nil
-
 	}
 
-	jobTime := clock.NewClock(nextJob.StartAt)
-	for jobTime.BeforeOrEqual(currentTime) {
-		pod := CreatePod(nextJob)
-		events = append(events, &submitter.SubmitEvent{Pod: pod})
-
-		nextJob, ok = s.iterator.Next().(PodMemory)
-		if !ok {
+	for s.iterator.ExistNext() {
+		nextJob := s.iterator.Value()
+		jobTime := clock.NewClock(nextJob.StartAt)
+		if jobTime.BeforeOrEqual(currentTime) {
+			pod := CreatePod(nextJob)
+			events = append(events, &submitter.SubmitEvent{Pod: pod})
+			s.iterator.Next()
+		} else {
 			break
 		}
-		jobTime = clock.NewClock(nextJob.StartAt)
 	}
 
 	if s.iterator.RemainingValues() == 0 {

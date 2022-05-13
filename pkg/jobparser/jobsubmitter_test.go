@@ -46,14 +46,17 @@ func TestSubmitJobWhenTime(t *testing.T) {
 		sut := jobparser.NewJobSubmitter(jobs)
 		simTime := clock.NewClock(now)
 		events, err := sut.Submit(simTime, nil, nil)
+		assert.NoError(t, err)
+
 		assert.Equal(t, 3, len(events))
 		assertSubmitEvent(t, events[0], "j1")
+		assertSubmitEvent(t, events[1], "j2")
 		assertTerminateEvent(t, events[2])
-		assert.NoError(t, err)
 
 		events, err = sut.Submit(simTime, nil, nil)
 		assert.NoError(t, err)
-		assert.Empty(t, events)
+		assert.Len(t, events, 1)
+		assertTerminateEvent(t, events[0])
 	})
 }
 
@@ -62,14 +65,28 @@ func TestIterator(t *testing.T) {
 	jobs := []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}, {Time: now.Add(1 * time.Hour), Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}, {Time: now.Add(1 * time.Hour), Usage: 100.}}}}
 	sut := jobparser.NewIterator(jobs)
 	val := sut.Value()
-	assert.Equal(t, 2, sut.RemainingValues())
 	assert.Equal(t, jobs[0], val)
-	val = sut.Next()
+	assert.Equal(t, 2, sut.RemainingValues())
+
+	assert.True(t, sut.Next())
+	assert.Equal(t, jobs[1], sut.Value())
 	assert.Equal(t, 1, sut.RemainingValues())
-	assert.Equal(t, jobs[1], val)
-	val = sut.Next()
+
+	assert.False(t, sut.Next())
 	assert.Equal(t, 0, sut.RemainingValues())
-	assert.Equal(t, val, nil)
+	t.Run("next for len(1)", func(t *testing.T) {
+		jobs := []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
+		sut := jobparser.NewIterator(jobs)
+		assert.False(t, sut.Next())
+
+	})
+	t.Run("next for len(2)", func(t *testing.T) {
+		jobs := []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
+		sut := jobparser.NewIterator(jobs)
+		assert.True(t, sut.Next())
+		assert.False(t, sut.Next())
+
+	})
 }
 
 func assertSubmitEvent(t testing.TB, event submitter.Event, podName string) {
