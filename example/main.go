@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
 
 	kubesim "github.com/elchead/k8s-cluster-simulator/pkg"
 	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
@@ -61,7 +62,8 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.L.Fatal("Failed to read pod file:", err)
 		}
-		kubesim.AddSubmitter("JobSubmitter", jobparser.NewJobSubmitterFromFile(file))
+		submitter := jobparser.NewJobSubmitterFromFile(file)
+		kubesim.AddSubmitter("JobSubmitter", submitter)
 
 		// 3. Run the main loop of KubeSim.
 		//    In each execution of the loop, KubeSim
@@ -90,10 +92,10 @@ func buildScheduler() scheduler.Scheduler {
 	// 	},
 	// )
 
-	// // 2. Register plugin(s)
-	// // Predicate
-	// sched.AddPredicate("GeneralPredicates", predicates.GeneralPredicates)
-	// // Prioritizer
+	// 2. Register plugin(s)
+	// Predicate
+	sched.AddPredicate("GeneralPredicates", predicates.GeneralPredicates)
+	// Prioritizer
 	// sched.AddPrioritizer(priorities.PriorityConfig{
 	// 	Name:   "BalancedResourceAllocation",
 	// 	Map:    priorities.BalancedResourceAllocationMap,
