@@ -35,7 +35,10 @@ func TestUpdateMetrics(t *testing.T) {
 		
 	})
 	t.Run("get free memory percentage",func(t *testing.T) {
-
+		metrics := createNodeMetrics(500,5)
+		sut.UpdateNodeMetrics(metrics)
+		free,_ :=sut.GetFreeMemoryNode("zone2")
+		assert.Equal(t,99.,free)	
 	})
 }
 
