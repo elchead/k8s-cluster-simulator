@@ -66,7 +66,7 @@ func TestGetPodMemories(t *testing.T) {
 		sut.UpdatePodMetric("worker",podmetrics)
 		res, err := sut.GetPodMemories("zone3")
 		assert.NoError(t, err)
-		assert.Equal(t, 50.,res["worker"])
+		assert.Equal(t, 5e10,res["worker"])
 	})
 	t.Run("update multiple pod metrics and get free pod memories", func(t *testing.T) {
 		workerMetrics := pod.Metrics{Node:"zone3",ResourceUsage:createMemoryResource(50)}
@@ -84,19 +84,19 @@ func TestGetPodMemories(t *testing.T) {
 		t.Run("get pod from node", func(t *testing.T) {
 			mem,ok := res["z3_worker"]
 			assert.True(t,ok)
-			assert.Equal(t, 50.,mem)
+			assert.Equal(t, 5e10,mem)
 		})
 	})
 
 }
 
 func createNodeMetrics(total,used int64) node.Metrics {
-	return node.Metrics{Allocatable: v1.ResourceList{"memory": *resource.NewQuantity(total,resource.BinarySI),},TotalResourceUsage:v1.ResourceList{"memory": *resource.NewQuantity(used,resource.BinarySI)}}
+	return node.Metrics{Allocatable: createMemoryResource(total),TotalResourceUsage:createMemoryResource(used)}
 
 }
 
 func createMemoryResource(quantity int64) v1.ResourceList {
-	return v1.ResourceList{"memory": *resource.NewQuantity(quantity,resource.BinarySI),}	
+	return v1.ResourceList{"memory": *resource.NewScaledQuantity(quantity,resource.Giga),}	
 }
 
 func newNode(name, memCapacity string) (node.Node,error) {

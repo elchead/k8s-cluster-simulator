@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/pod"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/node"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
@@ -42,8 +43,8 @@ func (c *Client) GetPodMemories(name string) (monitoring.PodMemMap,error) {
 
 func (c *Client) UpdateNodeMetrics(metrics map[string]node.Metrics) {
 	for node, metric := range metrics {
-		c.UsedMemoryMap[node], _ = metric.TotalResourceUsage.Memory().AsInt64()
-		c.TotalMemoryMap[node], _ = metric.Allocatable.Memory().AsInt64()
+		c.UsedMemoryMap[node] = metric.TotalResourceUsage.Memory().ScaledValue(resource.Giga)
+		c.TotalMemoryMap[node] = metric.Allocatable.Memory().ScaledValue(resource.Giga)
 	}
 }
 
