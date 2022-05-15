@@ -34,6 +34,7 @@ func TestUpdateMetrics(t *testing.T) {
 		metrics := node.Metrics{Allocatable: v1.ResourceList{"memory": nodeSz,},TotalResourceUsage:v1.ResourceList{"memory": usageSz}} //metrics.Metrics{}
 		sut.UpdateNodeMetrics(metrics)
 		assert.Equal(t,int64(5368709120),sut.UsedMemory)
+		assert.Equal(t,int64(483183820800),sut.TotalMemory)
 		
 	})
 }

@@ -5,6 +5,7 @@ import (
 )
 type Client struct {
 	UsedMemory int64
+	TotalMemory int64
 }
 
 func NewClient() *Client {
@@ -13,6 +14,7 @@ func NewClient() *Client {
 
 func (c *Client) UpdateNodeMetrics(metrics node.Metrics) {
 	c.UsedMemory, _= metrics.TotalResourceUsage.Memory().AsInt64()
+	c.TotalMemory, _ = metrics.Allocatable.Memory().AsInt64()
 }
 
 
