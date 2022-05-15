@@ -1,5 +1,8 @@
 package migration
 
+import (
+	"github.com/elchead/k8s-cluster-simulator/pkg/node"
+)
 type Client struct {
 	UsedMemory int64
 }
@@ -8,6 +11,8 @@ func NewClient() *Client {
 	return &Client{}
 }
 
-func (c *Client) UpdateMetrics(memory int64) {
-	c.UsedMemory = memory
+func (c *Client) UpdateNodeMetrics(metrics node.Metrics) {
+	c.UsedMemory, _= metrics.TotalResourceUsage.Memory().AsInt64()
 }
+
+

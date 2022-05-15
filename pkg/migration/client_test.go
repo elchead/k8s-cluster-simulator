@@ -7,6 +7,7 @@ import (
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-cluster-simulator/pkg/config"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	// "github.com/elchead/k8s-cluster-simulator/pkg/metrics"
 	"github.com/elchead/k8s-cluster-simulator/pkg/migration"
@@ -24,9 +25,17 @@ func TestCreateNode(t *testing.T) {
 
 func TestUpdateMetrics(t *testing.T) {
 	sut := migration.NewClient()
-	// metrics := node.Metrics{Allocatable: v1.ResourceList{"memory":resource.ParseQuantity("450Gi")},TotalResourceUsage:} //metrics.Metrics{}
-	sut.UpdateMetrics(int64(483183820800))
-	assert.Equal(t,int64(483183820800),sut.UsedMemory)
+	
+	t.Run("update node metrics", func(t *testing.T) {
+		nodeSz, err := resource.ParseQuantity("450Gi")
+		assert.NoError(t, err)
+		usageSz, _ := resource.ParseQuantity("5Gi")
+
+		metrics := node.Metrics{Allocatable: v1.ResourceList{"memory": nodeSz,},TotalResourceUsage:v1.ResourceList{"memory": usageSz}} //metrics.Metrics{}
+		sut.UpdateNodeMetrics(metrics)
+		assert.Equal(t,int64(5368709120),sut.UsedMemory)
+		
+	})
 }
 
 func newNode(name, memCapacity string) (node.Node,error) {
