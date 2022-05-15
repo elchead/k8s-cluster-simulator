@@ -7,6 +7,9 @@ import (
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-cluster-simulator/pkg/config"
+
+	// "github.com/elchead/k8s-cluster-simulator/pkg/metrics"
+	"github.com/elchead/k8s-cluster-simulator/pkg/migration"
 	"github.com/elchead/k8s-cluster-simulator/pkg/node"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
@@ -17,6 +20,13 @@ func TestCreateNode(t *testing.T) {
 	assert.NoError(t, err)
 	nodeInfo, _ := node.ToNodeInfo(clock.NewClock(time.Now()))
 	assert.Equal(t,int64(483183820800),nodeInfo.AllocatableResource().Memory)	
+}
+
+func TestUpdateMetrics(t *testing.T) {
+	sut := migration.NewClient()
+	// metrics := node.Metrics{Allocatable: v1.ResourceList{"memory":resource.ParseQuantity("450Gi")},TotalResourceUsage:} //metrics.Metrics{}
+	sut.UpdateMetrics(int64(483183820800))
+	assert.Equal(t,int64(483183820800),sut.UsedMemory)
 }
 
 func newNode(name, memCapacity string) (node.Node,error) {
