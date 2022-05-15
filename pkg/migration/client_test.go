@@ -27,16 +27,21 @@ func TestUpdateMetrics(t *testing.T) {
 	sut := migration.NewClient()
 	
 	t.Run("update node metrics", func(t *testing.T) {
-		nodeSz, err := resource.ParseQuantity("450Gi")
-		assert.NoError(t, err)
-		usageSz, _ := resource.ParseQuantity("5Gi")
-
-		metrics := node.Metrics{Allocatable: v1.ResourceList{"memory": nodeSz,},TotalResourceUsage:v1.ResourceList{"memory": usageSz}} //metrics.Metrics{}
+		metrics := createNodeMetrics(450,5)
 		sut.UpdateNodeMetrics(metrics)
-		assert.Equal(t,int64(5368709120),sut.UsedMemory)
-		assert.Equal(t,int64(483183820800),sut.TotalMemory)
+
+		assert.Equal(t,int64(5),sut.UsedMemory)
+		assert.Equal(t,int64(450),sut.TotalMemory)
 		
 	})
+	t.Run("get free memory percentage",func(t *testing.T) {
+
+	})
+}
+
+func createNodeMetrics(total,used int64) node.Metrics {
+	return node.Metrics{Allocatable: v1.ResourceList{"memory": *resource.NewQuantity(total,resource.BinarySI),},TotalResourceUsage:v1.ResourceList{"memory": *resource.NewQuantity(used,resource.BinarySI)}}
+
 }
 
 func newNode(name, memCapacity string) (node.Node,error) {
