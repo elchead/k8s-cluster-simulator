@@ -29,6 +29,7 @@ import (
 
 	kubesim "github.com/elchead/k8s-cluster-simulator/pkg"
 	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
+	"github.com/elchead/k8s-cluster-simulator/pkg/migration"
 	"github.com/elchead/k8s-cluster-simulator/pkg/queue"
 	"github.com/elchead/k8s-cluster-simulator/pkg/scheduler"
 )
@@ -56,7 +57,8 @@ var rootCmd = &cobra.Command{
 		// 1. Create a KubeSim with a pod queue and a scheduler.
 		queue := queue.NewPriorityQueue()
 		sched := buildScheduler() // see below
-		sim := kubesim.NewKubeSimFromConfigPathOrDie(configPath, queue, sched)
+		metricClient := migration.NewClient()
+		sim := kubesim.NewKubeSimFromConfigPathOrDie(configPath, queue, sched,metricClient)
 
 		conf, _ := kubesim.ReadConfig(configPath)
 		// fmt.Println("STARTTIME:", conf.StartClock)

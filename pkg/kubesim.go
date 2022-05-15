@@ -32,6 +32,7 @@ import (
 	"github.com/elchead/k8s-cluster-simulator/pkg/config"
 	l "github.com/elchead/k8s-cluster-simulator/pkg/log"
 	"github.com/elchead/k8s-cluster-simulator/pkg/metrics"
+	"github.com/elchead/k8s-cluster-simulator/pkg/migration"
 	"github.com/elchead/k8s-cluster-simulator/pkg/node"
 	"github.com/elchead/k8s-cluster-simulator/pkg/pod"
 	"github.com/elchead/k8s-cluster-simulator/pkg/queue"
@@ -48,6 +49,7 @@ type KubeSim struct {
 	nodes       map[string]*node.Node
 	pendingPods queue.PodQueue
 	boundPods   map[string]*pod.Pod
+	MigrationClient *migration.Client
 
 	submitters map[string]submitter.Submitter
 	scheduler  scheduler.Scheduler
@@ -59,8 +61,7 @@ type KubeSim struct {
 // NewKubeSim creates a new KubeSim with the given config, queue, and scheduler.
 // Returns error if the configuration failed.
 func NewKubeSim(
-	conf *config.Config, queue queue.PodQueue, sched scheduler.Scheduler,
-) (*KubeSim, error) {
+	conf *config.Config, queue queue.PodQueue, sched scheduler.Scheduler,metricClient *migration.Client) (*KubeSim, error) {
 
 	log.G(context.TODO()).Debugf("Config: %+v", *conf)
 
@@ -91,7 +92,7 @@ func NewKubeSim(
 	return &KubeSim{
 		tick:  time.Duration(conf.Tick) * time.Second,
 		clock: clk,
-
+		MigrationClient: metricClient,
 		nodes:       nodes,
 		pendingPods: queue,
 		boundPods:   map[string]*pod.Pod{},
@@ -108,25 +109,23 @@ func NewKubeSim(
 // extension), queue, and scheduler.
 // Returns error if the configuration failed.
 func NewKubeSimFromConfigPath(
-	confPath string, queue queue.PodQueue, sched scheduler.Scheduler,
-) (*KubeSim, error) {
+	confPath string, queue queue.PodQueue, sched scheduler.Scheduler,client *migration.Client) (*KubeSim, error) {
 
 	conf, err := ReadConfig(confPath)
 	if err != nil {
 		return nil, errors.Errorf("Error reading config: %s", err.Error())
 	}
 
-	return NewKubeSim(conf, queue, sched)
+	return NewKubeSim(conf, queue, sched,client)
 }
 
 // NewKubeSimFromConfigPathOrDie creates a new KubeSim with config from confPath (excluding file
 // extension), queue, and scheduler.
 // If an error occurs during the initialization, it panics and stops the execution.
 func NewKubeSimFromConfigPathOrDie(
-	confPath string, queue queue.PodQueue, sched scheduler.Scheduler,
-) *KubeSim {
+	confPath string, queue queue.PodQueue, sched scheduler.Scheduler,client *migration.Client) *KubeSim {
 
-	kubesim, err := NewKubeSimFromConfigPath(confPath, queue, sched)
+	kubesim, err := NewKubeSimFromConfigPath(confPath, queue, sched,client)
 	if err != nil {
 		log.L.Fatal("Config failed: ", err)
 	}
@@ -148,6 +147,9 @@ func (k *KubeSim) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// log.L.Info("HI:")	
+	// update client
 
 	submitterAddedEver := len(k.submitters) > 0
 
@@ -177,6 +179,23 @@ func (k *KubeSim) Run(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+
+			// update client
+			nodeMets,ok := met[metrics.NodesMetricsKey].(map[string]node.Metrics)
+			if !ok {
+				log.L.Fatal("No node metrics",nodeMets)
+		
+			}
+			podMets,ok := met[metrics.PodsMetricsKey].(map[string]pod.Metrics)
+			if !ok {
+				log.L.Fatal("No pod metrics",podMets)
+		
+			}
+			k.MigrationClient.UpdateNodeMetrics(nodeMets)
+			k.MigrationClient.UpdatePodMetrics(podMets)
+			// stats,err := k.MigrationClient.GetPodMemories("zone2")
+			// log.L.Debug("ERR:",err)
+			// log.L.Debug("PODS: ",stats)
 
 			if k.clock.Sub(preMetricsClock) > k.metricsTick {
 				preMetricsClock = k.clock
@@ -389,7 +408,7 @@ func (k *KubeSim) schedule() error {
 			nodeName := bind.ScheduleResult.SuggestedHost
 			node, ok := k.nodes[nodeName]
 			if !ok {
-				return fmt.Errorf("No node named %q", nodeName)
+				return fmt.Errorf("no node named %q", nodeName)
 			}
 			bind.Pod.Spec.NodeName = nodeName
 
