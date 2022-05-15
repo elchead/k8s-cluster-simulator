@@ -20,7 +20,7 @@ func NewClient() *Client {
 }
 
 func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
-	intUsage,_ :=  pd.ResourceUsage.Memory().AsInt64()
+	intUsage :=  pd.ResourceUsage.Memory().ScaledValue(resource.Giga)
 	c.PodMemoryMap[pd.Node] = monitoring.PodMemMap{podname:float64(intUsage)}
 	// for name, value := range pods {
 	// }
