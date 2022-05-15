@@ -26,21 +26,24 @@ func TestCreateNode(t *testing.T) {
 func TestUpdateMetrics(t *testing.T) {
 	sut := migration.NewClient()
 	
-	t.Run("update node metrics", func(t *testing.T) {
-		metrics := createNodeMetrics(450,5)
+	t.Run("get free memory percentage of specfic node",func(t *testing.T) {
+		nodemetric := createNodeMetrics(500,5)
+		metrics := map[string]node.Metrics{"zone2": nodemetric}
 		sut.UpdateNodeMetrics(metrics)
-
-		assert.Equal(t,int64(5),sut.UsedMemory)
-		assert.Equal(t,int64(450),sut.TotalMemory)
-		
-	})
-	t.Run("get free memory percentage",func(t *testing.T) {
-		metrics := createNodeMetrics(500,5)
-		sut.UpdateNodeMetrics(metrics)
-		free,_ :=sut.GetFreeMemoryNode("zone2")
+		free,err :=sut.GetFreeMemoryNode("zone2")
+		assert.NoError(t, err)
 		assert.Equal(t,99.,free)	
-	})
-}
+
+		t.Run("fail for non existing node", func(t *testing.T) {
+			_,err :=sut.GetFreeMemoryNode("zone3")
+			assert.Error(t, err)
+
+		})
+})
+	
+
+	}
+
 
 func createNodeMetrics(total,used int64) node.Metrics {
 	return node.Metrics{Allocatable: v1.ResourceList{"memory": *resource.NewQuantity(total,resource.BinarySI),},TotalResourceUsage:v1.ResourceList{"memory": *resource.NewQuantity(used,resource.BinarySI)}}
