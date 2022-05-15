@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/containerd/containerd v1.2.5
 	github.com/cpuguy83/strongerrors v0.2.1
+	github.com/elchead/k8s-migration-controller v0.0.0-20220515124803-add2c01f7bc0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.4.1
 	github.com/spf13/cobra v0.0.3
@@ -21,6 +22,7 @@ require (
 	github.com/BurntSushi/toml v1.1.0 // indirect
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/deepmap/oapi-codegen v1.8.2 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/evanphx/json-patch v0.5.2 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
@@ -35,6 +37,8 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/influxdata/influxdb-client-go/v2 v2.8.2 // indirect
+	github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/magiconair/properties v1.8.0 // indirect
@@ -56,13 +60,13 @@ require (
 	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/stretchr/objx v0.1.1 // indirect
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
+	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	google.golang.org/appengine v1.5.0 // indirect
 	google.golang.org/grpc v1.46.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect

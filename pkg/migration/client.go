@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/node"
+	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 )
 type Client struct {
 	UsedMemoryMap map[string]	int64
@@ -31,6 +32,18 @@ func (c *Client) GetFreeMemoryNode(name string) (float64, error) {
 		return 0, errors.New("could not get total memory for node " +name)
 	}
 	return 100.- float64(free)/float64(total)*100., nil
+}
+
+func (c *Client) 	GetFreeMemoryOfNodes() (monitoring.NodeFreeMemMap, error) {
+	res := make(monitoring.NodeFreeMemMap)
+	for node, _ := range c.UsedMemoryMap {
+		free, err := c.GetFreeMemoryNode(node)
+		if err != nil {
+			return nil, err
+		}
+		res[node] = free
+	}
+	return res, nil
 }
 
 

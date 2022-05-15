@@ -7,6 +7,7 @@ import (
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-cluster-simulator/pkg/config"
+	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	// "github.com/elchead/k8s-cluster-simulator/pkg/metrics"
@@ -39,7 +40,15 @@ func TestUpdateMetrics(t *testing.T) {
 			assert.Error(t, err)
 
 		})
-})
+	})
+	t.Run("get free memory of all nodes", func(t *testing.T) {
+		metrics := map[string]node.Metrics{"zone2": createNodeMetrics(500,5),"zone3": createNodeMetrics(500,10)}
+		sut.UpdateNodeMetrics(metrics)
+		free,err :=sut.GetFreeMemoryOfNodes()
+		assert.NoError(t, err)
+		assert.Equal(t,monitoring.NodeFreeMemMap{"zone2":99.,"zone3":98.},free)
+
+	})
 	
 
 	}
