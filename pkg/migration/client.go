@@ -9,10 +9,19 @@ import (
 type Client struct {
 	UsedMemoryMap map[string]	int64
 	TotalMemoryMap map[string]int64
+	PodMemory float64
 }
 
 func NewClient() *Client {
 	return &Client{UsedMemoryMap: make(map[string]int64), TotalMemoryMap: make(map[string]int64)}
+}
+
+func (c *Client) UpdatePodMemory(value float64) {
+	c.PodMemory =  value
+}
+
+func (c *Client) GetPodMemories(name string) (monitoring.PodMemMap,error) {
+	return monitoring.PodMemMap{"pod":c.PodMemory},nil
 }
 
 func (c *Client) UpdateNodeMetrics(metrics map[string]node.Metrics) {

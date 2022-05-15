@@ -49,6 +49,13 @@ func TestUpdateMetrics(t *testing.T) {
 		assert.Equal(t,monitoring.NodeFreeMemMap{"zone2":99.,"zone3":98.},free)
 
 	})
+
+	t.Run("get free pod memories", func(t *testing.T) {
+		sut.UpdatePodMemory(50.)
+		res, err := sut.GetPodMemories("zone2")
+		assert.NoError(t, err)
+		assert.Equal(t, 50.,res["pod"])
+	})
 	
 
 	}
