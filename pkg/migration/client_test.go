@@ -7,6 +7,7 @@ import (
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-cluster-simulator/pkg/config"
+	"github.com/elchead/k8s-cluster-simulator/pkg/pod"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -51,19 +52,28 @@ func TestUpdateMetrics(t *testing.T) {
 	})
 
 	t.Run("get free pod memories", func(t *testing.T) {
-		sut.UpdatePodMemory(50.)
+		sut.UpdatePodMemory(map[string]float64{"pod":50.})
 		res, err := sut.GetPodMemories("zone2")
 		assert.NoError(t, err)
 		assert.Equal(t, 50.,res["pod"])
 	})
-	
-
+	t.Run("fail to get free pod memories if not existent for node", func(t *testing.T) {
+		podmetrics := pod.Metrics{Node:"zone3",ResourceUsage:createMemoryResource(50.)}
+		sut.UpdatePodMetric("worker",podmetrics)
+		_, err := sut.GetPodMemories("zone1")
+		assert.Error(t, err)
+		// assert.Equal(t, 50.,res["pod"])
+	})
 	}
 
 
 func createNodeMetrics(total,used int64) node.Metrics {
 	return node.Metrics{Allocatable: v1.ResourceList{"memory": *resource.NewQuantity(total,resource.BinarySI),},TotalResourceUsage:v1.ResourceList{"memory": *resource.NewQuantity(used,resource.BinarySI)}}
 
+}
+
+func createMemoryResource(quantity int64) v1.ResourceList {
+	return v1.ResourceList{"memory": *resource.NewQuantity(quantity,resource.BinarySI),}	
 }
 
 func newNode(name, memCapacity string) (node.Node,error) {

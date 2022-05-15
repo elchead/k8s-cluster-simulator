@@ -3,25 +3,41 @@ package migration
 import (
 	"errors"
 
+	"github.com/elchead/k8s-cluster-simulator/pkg/pod"
+
 	"github.com/elchead/k8s-cluster-simulator/pkg/node"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 )
 type Client struct {
 	UsedMemoryMap map[string]	int64
 	TotalMemoryMap map[string]int64
-	PodMemory float64
+	PodMemoryMap map[string]monitoring.PodMemMap
 }
 
 func NewClient() *Client {
-	return &Client{UsedMemoryMap: make(map[string]int64), TotalMemoryMap: make(map[string]int64)}
+	return &Client{UsedMemoryMap: make(map[string]int64), TotalMemoryMap: make(map[string]int64), PodMemoryMap: make(map[string]monitoring.PodMemMap)}
 }
 
-func (c *Client) UpdatePodMemory(value float64) {
-	c.PodMemory =  value
+func (c *Client) UpdatePodMemory(pods map[string]float64) {
+	c.PodMemoryMap["zone2"] =  pods
+	// for name, value := range pods {
+	// 	c.PodMemoryMap[name] =  value
+	// }
+}
+
+func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
+	intUsage,_ :=  pd.ResourceUsage.Memory().AsInt64()
+	c.PodMemoryMap[pd.Node] = monitoring.PodMemMap{podname:float64(intUsage)}
+	// for name, value := range pods {
+	// }
 }
 
 func (c *Client) GetPodMemories(name string) (monitoring.PodMemMap,error) {
-	return monitoring.PodMemMap{"pod":c.PodMemory},nil
+	val, ok := c.PodMemoryMap[name]
+	if !ok {
+		return nil, errors.New("could not get pod memory for node " +name)
+	}
+	return val,nil
 }
 
 func (c *Client) UpdateNodeMetrics(metrics map[string]node.Metrics) {
