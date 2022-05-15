@@ -50,13 +50,10 @@ func TestUpdateMetrics(t *testing.T) {
 		assert.Equal(t,monitoring.NodeFreeMemMap{"zone2":99.,"zone3":98.},free)
 
 	})
+	}
 
-	t.Run("get free pod memories", func(t *testing.T) {
-		sut.UpdatePodMemory(map[string]float64{"pod":50.})
-		res, err := sut.GetPodMemories("zone2")
-		assert.NoError(t, err)
-		assert.Equal(t, 50.,res["pod"])
-	})
+func TestGetPodMemories(t *testing.T) {
+	sut := migration.NewClient()
 	t.Run("fail to get free pod memories if not existent for node", func(t *testing.T) {
 		podmetrics := pod.Metrics{Node:"zone3",ResourceUsage:createMemoryResource(50.)}
 		sut.UpdatePodMetric("worker",podmetrics)
@@ -64,8 +61,34 @@ func TestUpdateMetrics(t *testing.T) {
 		assert.Error(t, err)
 		// assert.Equal(t, 50.,res["pod"])
 	})
-	}
+	t.Run("get free pod memories if node existent", func(t *testing.T) {
+		podmetrics := pod.Metrics{Node:"zone3",ResourceUsage:createMemoryResource(50)}
+		sut.UpdatePodMetric("worker",podmetrics)
+		res, err := sut.GetPodMemories("zone3")
+		assert.NoError(t, err)
+		assert.Equal(t, 50.,res["worker"])
+	})
+	t.Run("update multiple pod metrics and get free pod memories", func(t *testing.T) {
+		workerMetrics := pod.Metrics{Node:"zone3",ResourceUsage:createMemoryResource(50)}
+		z2Metrics := pod.Metrics{Node:"zone2",ResourceUsage:createMemoryResource(50)}
 
+		
+		sut.UpdatePodMetrics(map[string]pod.Metrics{"z3_worker":workerMetrics,"z2_worker":z2Metrics})
+		res, err := sut.GetPodMemories("zone3")
+		assert.NoError(t, err)
+
+		t.Run("do not get pod from other node", func(t *testing.T) {
+			_,ok := res["z2_worker"]
+			assert.False(t,ok)
+		})
+		t.Run("get pod from node", func(t *testing.T) {
+			mem,ok := res["z3_worker"]
+			assert.True(t,ok)
+			assert.Equal(t, 50.,mem)
+		})
+	})
+
+}
 
 func createNodeMetrics(total,used int64) node.Metrics {
 	return node.Metrics{Allocatable: v1.ResourceList{"memory": *resource.NewQuantity(total,resource.BinarySI),},TotalResourceUsage:v1.ResourceList{"memory": *resource.NewQuantity(used,resource.BinarySI)}}

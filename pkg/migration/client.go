@@ -9,20 +9,13 @@ import (
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 )
 type Client struct {
-	UsedMemoryMap map[string]	int64
-	TotalMemoryMap map[string]int64
-	PodMemoryMap map[string]monitoring.PodMemMap
+	UsedMemoryMap map[string]	int64 // key: nodeName
+	TotalMemoryMap map[string]int64 // key: nodeName
+	PodMemoryMap map[string]monitoring.PodMemMap // key: nodeName
 }
 
 func NewClient() *Client {
 	return &Client{UsedMemoryMap: make(map[string]int64), TotalMemoryMap: make(map[string]int64), PodMemoryMap: make(map[string]monitoring.PodMemMap)}
-}
-
-func (c *Client) UpdatePodMemory(pods map[string]float64) {
-	c.PodMemoryMap["zone2"] =  pods
-	// for name, value := range pods {
-	// 	c.PodMemoryMap[name] =  value
-	// }
 }
 
 func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
@@ -31,6 +24,13 @@ func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
 	// for name, value := range pods {
 	// }
 }
+
+func (c *Client) UpdatePodMetrics(pods map[string]pod.Metrics) {
+	for podname,pod := range pods {
+		c.UpdatePodMetric(podname,pod)
+	}
+}
+
 
 func (c *Client) GetPodMemories(name string) (monitoring.PodMemMap,error) {
 	val, ok := c.PodMemoryMap[name]
