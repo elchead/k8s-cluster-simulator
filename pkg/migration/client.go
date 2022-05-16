@@ -3,6 +3,7 @@ package migration
 import (
 	"errors"
 
+	"github.com/containerd/containerd/log"
 	"github.com/elchead/k8s-cluster-simulator/pkg/pod"
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -21,7 +22,11 @@ func NewClient() *Client {
 
 func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
 	intUsage :=  pd.ResourceUsage.Memory().ScaledValue(resource.Giga)
-	c.PodMemoryMap[pd.Node] = monitoring.PodMemMap{podname:float64(intUsage)}
+	if len(c.PodMemoryMap[pd.Node]) == 0 {
+		c.PodMemoryMap[pd.Node] = make(monitoring.PodMemMap)		
+	} 
+	podmap := c.PodMemoryMap[pd.Node]
+	podmap[podname] = float64(intUsage)
 	// for name, value := range pods {
 	// }
 }
@@ -38,6 +43,7 @@ func (c *Client) GetPodMemories(name string) (monitoring.PodMemMap,error) {
 	if !ok {
 		return nil, errors.New("could not get pod memory for node " +name)
 	}
+	log.L.Debug("Podmemories",name, val)
 	return val,nil
 }
 
@@ -69,6 +75,8 @@ func (c *Client) 	GetFreeMemoryOfNodes() (monitoring.NodeFreeMemMap, error) {
 		}
 		res[node] = free
 	}
+	log.L.Debug("Nodememory",res )
+
 	return res, nil
 }
 
