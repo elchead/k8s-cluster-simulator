@@ -79,8 +79,8 @@ var rootCmd = &cobra.Command{
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
 
 		cluster := monitoring.NewCluster()
-		requestPolicy := monitoring.NewThresholdPolicyWithCluster(45., cluster, metricClient)
-		migrationPolicy := monitoring.MaxMigrator{Cluster: cluster, Client: metricClient}
+		requestPolicy := monitoring.NewThresholdPolicyWithCluster(40., cluster, metricClient)
+		migrationPolicy := monitoring.BigEnoughMigrator{Cluster: cluster, Client: metricClient}
 		migController := monitoring.NewController(requestPolicy, migrationPolicy)
 		sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTime(migController,jobs,endTime))
 		// 3. Run the main loop of KubeSim.
