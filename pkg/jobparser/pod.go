@@ -2,10 +2,29 @@ package jobparser
 
 import (
 	"fmt"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
+	res := make([]Record, 0, len(podmem))
+	var beforeIdx int
+	for i, record := range podmem {
+		if !record.Time.Before(t) {
+			beforeIdx = i
+		}
+	}
+	
+	// check between
+	if podmem[beforeIdx-1].Time.Before(t) && podmem[beforeIdx].Time.After(t) {
+		podmem[beforeIdx-1].Time = t
+		res = append(res,podmem[beforeIdx-1])
+	}
+
+	return append(res, podmem[beforeIdx:]...)
+}
 
 func CreatePod(podinfo PodMemory) *v1.Pod {
 	simSpec := ""
