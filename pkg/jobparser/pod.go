@@ -14,14 +14,14 @@ type Time interface {
 }
 
 func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
-	res := make([]Record, 0, len(podmem))
+	res := make([]Record,0)
 	var beforeIdx int
 	for i, record := range podmem {
 		if !record.Time.Before(t) {
 			beforeIdx = i
+			break
 		}
 	}
-	
 	// check between
 	if len(podmem) == 1 {
 		podmem[0].Time = t
@@ -38,6 +38,7 @@ func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
 }
 
 func UpdateJobForMigration(podinfo PodMemory, migration time.Time) PodMemory {
+
 	podinfo.Records = FilterRecordsBefore(podinfo.Records,migration)
 	podinfo.Name = "m" + podinfo.Name
 	podinfo.StartAt = migration	

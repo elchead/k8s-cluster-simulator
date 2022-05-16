@@ -24,13 +24,13 @@ func TestMigrationPod(t *testing.T) {
 
 func TestFilterRecords(t *testing.T) {
 	now := time.Now()
-	records := []Record{{Time:now,  Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 1e2},{Time: now.Add(4 * time.Minute), Usage: 1e3}}
+	records := []Record{{Time:now,  Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 1e2},{Time: now.Add(4 * time.Minute), Usage: 1e3},{Time: now.Add(6 * time.Minute), Usage: 1e4}}
 	t.Run("get records bigger or equal that time",func(t *testing.T){
-		assert.Equal(t,[]Record{{Time: now.Add(4 * time.Minute), Usage: 1e3}},FilterRecordsBefore(records,now.Add(4 * time.Minute)))
+		assert.Equal(t,records[2:], FilterRecordsBefore(records,now.Add(4 * time.Minute)))
 	})
 	t.Run("start from last record when time in between two timestamps and set first time to checktime",func(t *testing.T){
 		checkTime := now.Add(3 * time.Minute)
-		assert.Equal(t,[]Record{{Time: checkTime, Usage: 1e2},{Time: now.Add(4 * time.Minute), Usage: 1e3}},FilterRecordsBefore(records,checkTime))
+		assert.Equal(t,records[1:],FilterRecordsBefore(records,checkTime))
 	})
 	t.Run("only 1 record",func(t *testing.T){
 		records := []Record{{Time:now,  Usage: 1e9}}
