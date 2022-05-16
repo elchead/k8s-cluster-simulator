@@ -40,8 +40,6 @@ func (m *MigrationSubmitter) Submit(
 		if job == nil {
 			return nil,errors.New("could not get job")
 		}
-		// if job..BeforeOrEqual(currentTime) 
-
 		migrationTime := currentTime.ToMetaV1().Time.Add(MigrationTime)
 		migratedJob := jobparser.UpdateJobForMigration(*job,migrationTime)
 
