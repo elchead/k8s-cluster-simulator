@@ -26,6 +26,13 @@ func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
 	return append(res, podmem[beforeIdx:]...)
 }
 
+
+func MigratePod(podinfo PodMemory,migration time.Time) *v1.Pod {
+	podinfo.Records = FilterRecordsBefore(podinfo.Records,migration)
+	podinfo.Name = "m" + podinfo.Name
+	return CreatePod(podinfo)
+}
+
 func CreatePod(podinfo PodMemory) *v1.Pod {
 	simSpec := ""
 	cpu := "8" // s: 5-10; m: 8-10; l:8-10
