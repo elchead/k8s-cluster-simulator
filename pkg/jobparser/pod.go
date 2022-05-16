@@ -8,6 +8,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type Time interface {
+	Before(u Time) bool
+	After(u Time) bool
+}
+
 func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
 	res := make([]Record, 0, len(podmem))
 	var beforeIdx int
@@ -18,9 +23,15 @@ func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
 	}
 	
 	// check between
-	if podmem[beforeIdx-1].Time.Before(t) && podmem[beforeIdx].Time.After(t) {
-		podmem[beforeIdx-1].Time = t
-		res = append(res,podmem[beforeIdx-1])
+	if len(podmem) == 1 {
+		podmem[0].Time = t
+		return append(res,podmem[0])
+
+	} else if beforeIdx > 0 {
+		if podmem[beforeIdx-1].Time.Before(t) && podmem[beforeIdx].Time.After(t) {
+			podmem[beforeIdx-1].Time = t
+			res = append(res,podmem[beforeIdx-1])
+		}
 	}
 
 	return append(res, podmem[beforeIdx:]...)

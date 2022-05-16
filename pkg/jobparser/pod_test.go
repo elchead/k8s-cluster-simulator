@@ -32,6 +32,15 @@ func TestFilterRecords(t *testing.T) {
 		checkTime := now.Add(3 * time.Minute)
 		assert.Equal(t,[]Record{{Time: checkTime, Usage: 1e2},{Time: now.Add(4 * time.Minute), Usage: 1e3}},FilterRecordsBefore(records,checkTime))
 	})
+	t.Run("only 1 record",func(t *testing.T){
+		records := []Record{{Time:now,  Usage: 1e9}}
+		assert.Equal(t,records,FilterRecordsBefore(records,now))
+	})
+	t.Run("when no records after migration time, just return previous record with migration time",func(t *testing.T){
+		checkTime := now.Add(4 * time.Minute)
+		records := []Record{{Time:now,  Usage: 1e9}}
+		assert.Equal(t,[]Record{{Time:checkTime,  Usage: 1e9}},FilterRecordsBefore(records,checkTime))
+	})
 }
 
 
