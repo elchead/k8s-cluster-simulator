@@ -37,11 +37,17 @@ func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
 	return append(res, podmem[beforeIdx:]...)
 }
 
-
-func MigratePod(podinfo PodMemory,migration time.Time) *v1.Pod {
+func UpdateJobForMigration(podinfo PodMemory, migration time.Time) PodMemory {
 	podinfo.Records = FilterRecordsBefore(podinfo.Records,migration)
 	podinfo.Name = "m" + podinfo.Name
-	return CreatePod(podinfo)
+	podinfo.StartAt = migration	
+	return podinfo
+}
+
+
+func MigratePod(podinfo PodMemory,migration time.Time) *v1.Pod {
+	migratedJob := UpdateJobForMigration(podinfo,migration)
+	return CreatePod(migratedJob)
 }
 
 func CreatePod(podinfo PodMemory) *v1.Pod {
