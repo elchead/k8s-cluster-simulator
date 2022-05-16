@@ -16,6 +16,7 @@ package util
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/cpuguy83/strongerrors"
 	"github.com/pkg/errors"
@@ -102,4 +103,8 @@ func PodKey(pod *v1.Pod) (string, error) {
 // PodKeyFromNames builds a key from the namespace and pod name.
 func PodKeyFromNames(namespace string, name string) string {
 	return fmt.Sprintf("%s/%s", namespace, name)
+}
+
+func JobNameFromPod(name string) string {
+	return 	strings.Split(name,"/")[1]
 }

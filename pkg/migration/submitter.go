@@ -9,6 +9,7 @@ import (
 	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
 	"github.com/elchead/k8s-cluster-simulator/pkg/metrics"
 	"github.com/elchead/k8s-cluster-simulator/pkg/submitter"
+	"github.com/elchead/k8s-cluster-simulator/pkg/util"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"k8s.io/kubernetes/pkg/scheduler/algorithm"
 )
@@ -37,7 +38,8 @@ func (m *MigrationSubmitter) Submit(
 
 	// add migrations to queue
 	for _,cmd := range migrations {
-		job := jobparser.GetJob(cmd.Pod,m.jobs)
+		jobName := util.JobNameFromPod(cmd.Pod)
+		job := jobparser.GetJob(jobName,m.jobs)
 		if job == nil {
 			return nil,errors.New("could not get job")
 		}

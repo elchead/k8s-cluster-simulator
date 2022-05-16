@@ -8,7 +8,7 @@ tick: 10
 
 # Start time at which the simulation starts, in RFC3339 format.
 # Optional (default: now)
-startClock: 2022-05-11T08:00:00Z 
+startClock: 2022-05-11T08:00:00Z
 #2019-01-01T00:00:00+09:00
 
 # Interval duration for logging metrics of the cluster, in seconds.
@@ -20,40 +20,40 @@ metricsTick: 60
 # The metrics is formatted with the given formatter.
 # Optional (default: not writing metrics)
 metricsLogger:
-- dest: stdout
-  formatter: table
-- dest: mysim.log
-  formatter: JSON
-- dest: mysim-hr.log
-  formatter: humanReadable
+  - dest: stdout
+    formatter: table
+  - dest: mig.log
+    formatter: JSON
+  - dest: mig-hr.log
+    formatter: humanReadable
 
 # Write configuration of each node.
 cluster:
-- metadata:
-    name: zone2
-    labels:
-      beta.kubernetes.io/os: simulated
-  spec:
-    unschedulable: false
-    # taints:
-    # - key: k
-    #   value: v
-    #   effect: NoSchedule
-  status:
-    allocatable:
-      cpu: 120
-      memory: 450Gi
-      pods: 1000 #important
-- metadata:
-    name: zone3
-    labels:
-      beta.kubernetes.io/os: simulated
-    # annotations:
-  spec:
-    unschedulable: false
-    # taints:
-  status:
-    allocatable:
-      cpu: 120
-      memory: 450Gi
-      pods: 1000
+  - metadata:
+      name: zone2
+      labels:
+        beta.kubernetes.io/os: simulated
+    spec:
+      unschedulable: false
+      # taints:
+      # - key: k
+      #   value: v
+      #   effect: NoSchedule
+    status:
+      allocatable:
+        cpu: 120
+        memory: 450Gi
+        pods: 1000 #important
+  - metadata:
+      name: zone3
+      labels:
+        beta.kubernetes.io/os: simulated
+      # annotations:
+    spec:
+      unschedulable: false
+      # taints:
+    status:
+      allocatable:
+        cpu: 120
+        memory: 450Gi
+        pods: 1000

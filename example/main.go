@@ -79,7 +79,7 @@ var rootCmd = &cobra.Command{
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
 
 		cluster := monitoring.NewCluster()
-		requestPolicy := monitoring.NewThresholdPolicyWithCluster(10., cluster, metricClient)
+		requestPolicy := monitoring.NewThresholdPolicyWithCluster(45., cluster, metricClient)
 		migrationPolicy := monitoring.MaxMigrator{Cluster: cluster, Client: metricClient}
 		migController := monitoring.NewController(requestPolicy, migrationPolicy)
 		sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTime(migController,jobs,endTime))
