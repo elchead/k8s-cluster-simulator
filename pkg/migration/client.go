@@ -32,7 +32,7 @@ func (c *Client) UpdatePodMetrics(pods map[string]pod.Metrics) {
 	}
 }
 
-
+// in Gb
 func (c *Client) GetPodMemories(name string) (monitoring.PodMemMap,error) {
 	val, ok := c.PodMemoryMap[name]
 	if !ok {

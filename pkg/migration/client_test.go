@@ -59,14 +59,13 @@ func TestGetPodMemories(t *testing.T) {
 		sut.UpdatePodMetric("worker",podmetrics)
 		_, err := sut.GetPodMemories("zone1")
 		assert.Error(t, err)
-		// assert.Equal(t, 50.,res["pod"])
 	})
 	t.Run("get free pod memories if node existent", func(t *testing.T) {
 		podmetrics := pod.Metrics{Node:"zone3",ResourceUsage:createMemoryResource(50)}
 		sut.UpdatePodMetric("worker",podmetrics)
 		res, err := sut.GetPodMemories("zone3")
 		assert.NoError(t, err)
-		assert.Equal(t, 5e10,res["worker"])
+		assert.Equal(t, 50.,res["worker"])
 	})
 	t.Run("update multiple pod metrics and get free pod memories", func(t *testing.T) {
 		workerMetrics := pod.Metrics{Node:"zone3",ResourceUsage:createMemoryResource(50)}
@@ -84,7 +83,7 @@ func TestGetPodMemories(t *testing.T) {
 		t.Run("get pod from node", func(t *testing.T) {
 			mem,ok := res["z3_worker"]
 			assert.True(t,ok)
-			assert.Equal(t, 5e10,mem)
+			assert.Equal(t, 50.,mem)
 		})
 	})
 
