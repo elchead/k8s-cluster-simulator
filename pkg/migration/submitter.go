@@ -1,11 +1,13 @@
 package migration
 
 import (
-	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
-	"github.com/elchead/k8s-cluster-simulator/pkg/metrics"
-	"github.com/elchead/k8s-migration-controller/pkg/migration"
+	"errors"
 
+	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
+	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
+	"github.com/elchead/k8s-cluster-simulator/pkg/metrics"
 	"github.com/elchead/k8s-cluster-simulator/pkg/submitter"
+	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"k8s.io/kubernetes/pkg/scheduler/algorithm"
 
 	v1 "k8s.io/api/core/v1"
@@ -18,6 +20,7 @@ type ControllerI interface {
 
 type MigrationSubmitter struct {
 	controller ControllerI
+	jobs []jobparser.PodMemory
 }
 
 func (m *MigrationSubmitter) Submit(
@@ -31,7 +34,11 @@ func (m *MigrationSubmitter) Submit(
 
 	events := make([]submitter.Event, 0, len(migrations)+1)
 	for _,cmd := range migrations {
-		events = append(events, &submitter.SubmitEvent{Pod:newPod(cmd.Pod,cmd.Usage)})
+		job := jobparser.GetJob(cmd.Pod,m.jobs)
+		if job == nil {
+			return nil,errors.New("could not get job")
+		}
+		events = append(events, &submitter.SubmitEvent{Pod:jobparser.MigratePod(*job,currentTime.ToMetaV1().Time)})
 	}
 	// }
 	return events, err
@@ -95,5 +102,9 @@ func newPod(name string,memUsage float64) *v1.Pod {
 
 func NewSubmitter(controller ControllerI) *MigrationSubmitter {
 	return &MigrationSubmitter{controller: controller}
+}
+
+func NewSubmitterWithJobs(controller ControllerI,jobs []jobparser.PodMemory) *MigrationSubmitter {
+	return &MigrationSubmitter{controller: controller,jobs: jobs}
 }
 
