@@ -37,6 +37,11 @@ func (it *Iterator) Value() PodMemory {
 	return it.jobs[it.current]
 }
 
+
+func (it *Iterator) Push(job PodMemory) {
+	it.jobs = append(it.jobs, job)
+}
+
 func (it *Iterator) Next() bool {
 	if it.current >= len(it.jobs)-1 {
 		it.current = len(it.jobs)

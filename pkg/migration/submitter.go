@@ -2,18 +2,19 @@ package migration
 
 import (
 	"errors"
+	"time"
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
 	"github.com/elchead/k8s-cluster-simulator/pkg/metrics"
 	"github.com/elchead/k8s-cluster-simulator/pkg/submitter"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
-	"k8s.io/kubernetes/pkg/scheduler/algorithm"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm"
 )
 
+const MigrationTime = 5 * time.Minute
 type ControllerI interface {
 	GetMigrations() (migrations []migration.MigrationCmd, err error)
 }
@@ -21,6 +22,7 @@ type ControllerI interface {
 type MigrationSubmitter struct {
 	controller ControllerI
 	jobs []jobparser.PodMemory
+	queue jobparser.Iterator
 }
 
 func (m *MigrationSubmitter) Submit(
@@ -32,15 +34,33 @@ func (m *MigrationSubmitter) Submit(
 		return nil, err
 	}
 
-	events := make([]submitter.Event, 0, len(migrations)+1)
+	// add migrations to queue
 	for _,cmd := range migrations {
 		job := jobparser.GetJob(cmd.Pod,m.jobs)
 		if job == nil {
 			return nil,errors.New("could not get job")
 		}
-		events = append(events, &submitter.SubmitEvent{Pod:jobparser.MigratePod(*job,currentTime.ToMetaV1().Time)})
+		// if job..BeforeOrEqual(currentTime) 
+
+		migrationTime := currentTime.ToMetaV1().Time.Add(MigrationTime)
+		migratedJob := jobparser.UpdateJobForMigration(*job,migrationTime)
+
+		m.queue.Push(migratedJob)
 	}
-	// }
+
+	// check queue and add events
+	events := make([]submitter.Event, 0, m.queue.RemainingValues()+1)
+	for m.queue.ExistNext() || m.queue.RemainingValues() == 1 {
+		nextJob := m.queue.Value()
+		jobTime := clock.NewClock(nextJob.StartAt)
+		if jobTime.BeforeOrEqual(currentTime) {
+			pod := jobparser.CreatePod(nextJob)
+			events = append(events, &submitter.SubmitEvent{Pod: pod})
+			m.queue.Next()
+		} else {
+			break
+		}
+	}
 	return events, err
 }
 
@@ -105,6 +125,6 @@ func NewSubmitter(controller ControllerI) *MigrationSubmitter {
 }
 
 func NewSubmitterWithJobs(controller ControllerI,jobs []jobparser.PodMemory) *MigrationSubmitter {
-	return &MigrationSubmitter{controller: controller,jobs: jobs}
+	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{})}
 }
 

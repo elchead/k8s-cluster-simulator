@@ -87,6 +87,16 @@ func TestIterator(t *testing.T) {
 		assert.False(t, sut.Next())
 
 	})
+	t.Run("empty iterator", func(t *testing.T) {
+		jobs := []jobparser.PodMemory{}
+		sut := jobparser.NewIterator(jobs)
+		assert.False(t, sut.Next())
+		job := jobparser.PodMemory{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}
+		sut.Push(job)
+		assert.Equal(t,job, sut.Value())
+		assert.Equal(t,1, sut.RemainingValues())
+
+	})
 }
 
 func assertSubmitEvent(t testing.TB, event submitter.Event, podName string) {

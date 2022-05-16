@@ -24,18 +24,16 @@ func TestSubmitter(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Empty(t,events)
 	})
-	// t.Run("migration cmd with name and usage returns pod with that spec", func(t *testing.T) {
-	// 	controllerStub := ControllerStub{"worker",1e9}
-	// 	sut := migration.NewSubmitter(controllerStub) 
-	// 	events, err := sut.Submit(simTime, nil, nil)
-	// 	assert.NoError(t, err)
-	// 	assertSubmitEvent(t, events[0], "worker")
-	// })
-	t.Run("migrate job", func(t *testing.T) {
+	t.Run("migrate job after 5 minutes", func(t *testing.T) {
 		jobs := []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
 		controllerStub := ControllerStub{"j2",1e9}
 		sut := migration.NewSubmitterWithJobs(controllerStub,jobs) 
 		events, err := sut.Submit(simTime, nil, nil)
+		assert.NoError(t, err)
+		assert.Empty(t, events)
+
+		afterMigration := now.Add(migration.MigrationTime)
+		events, err = sut.Submit(clock.NewClock(afterMigration), nil, nil)	
 		assert.NoError(t, err)
 		assertSubmitEvent(t, events[0], "mj2")
 	})
