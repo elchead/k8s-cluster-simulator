@@ -32,6 +32,7 @@ import (
 	"github.com/elchead/k8s-cluster-simulator/pkg/migration"
 	"github.com/elchead/k8s-cluster-simulator/pkg/queue"
 	"github.com/elchead/k8s-cluster-simulator/pkg/scheduler"
+	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 )
 
 func main() {
@@ -76,6 +77,12 @@ var rootCmd = &cobra.Command{
 		submitter := jobparser.NewJobSubmitter(jobs)
 		sim.AddSubmitter("JobSubmitter", submitter)
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
+
+		cluster := monitoring.NewCluster()
+		requestPolicy := monitoring.NewThresholdPolicyWithCluster(10., cluster, metricClient)
+		migrationPolicy := monitoring.MaxMigrator{Cluster: cluster, Client: metricClient}
+		migController := monitoring.NewController(requestPolicy, migrationPolicy)
+		sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTime(migController,jobs,endTime))
 		// 3. Run the main loop of KubeSim.
 		//    In each execution of the loop, KubeSim
 		//      1) stores pods submitted from the registered submitters to its queue,

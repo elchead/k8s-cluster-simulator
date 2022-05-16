@@ -4,13 +4,12 @@ import (
 	"errors"
 	"time"
 
+	"github.com/containerd/containerd/log"
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
 	"github.com/elchead/k8s-cluster-simulator/pkg/metrics"
 	"github.com/elchead/k8s-cluster-simulator/pkg/submitter"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/scheduler/algorithm"
 )
 
@@ -23,6 +22,7 @@ type MigrationSubmitter struct {
 	controller ControllerI
 	jobs []jobparser.PodMemory
 	queue jobparser.Iterator
+	endTime clock.Clock
 }
 
 func (m *MigrationSubmitter) Submit(
@@ -30,6 +30,7 @@ func (m *MigrationSubmitter) Submit(
 	n algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error) {
 	migrations, err := m.controller.GetMigrations()
+	log.L.Debug("MIGRATION:",migrations,err)
 	if err != nil {
 		return nil, err
 	}
@@ -54,68 +55,18 @@ func (m *MigrationSubmitter) Submit(
 		if jobTime.BeforeOrEqual(currentTime) {
 			pod := jobparser.CreatePod(nextJob)
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
+			// TODO delete old pod but then job deleter deletes twice..
 			m.queue.Next()
 		} else {
 			break
 		}
 	}
-	return events, err
-}
 
-func newPod(name string,memUsage float64) *v1.Pod {
-	simSpec := ""
-// 	for i := 0; i < s.myrand.Intn(4)+1; i++ {
-// 		sec := 60 * s.myrand.Intn(60)
-// 		cpu := 1 + s.myrand.Intn(4)
-// 		mem := 1 + s.myrand.Intn(4)
-// 		gpu := s.myrand.Intn(2)
-
-// 		simSpec += fmt.Sprintf(`
-// - seconds: %d
-//   resourceUsage:
-//     cpu: %d
-//     memory: %dGi
-//     nvidia.com/gpu: %d
-// `, sec, cpu, mem, gpu)
-// 	}
-
-	// prio := s.myrand.Int31n(3) / 2 // 0, 0, 1
-
-	pod := v1.Pod{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Pod",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: "default",
-			Annotations: map[string]string{
-				"simSpec": simSpec,
-			},
-		},
-		// Spec: v1.PodSpec{
-		// 	Containers: []v1.Container{
-		// 		{
-		// 			Name:  "container",
-		// 			Image: "container",
-		// 			Resources: v1.ResourceRequirements{
-		// 				Requests: v1.ResourceList{
-		// 					"cpu":            resource.MustParse("4"),
-		// 					"memory":         resource.MustParse("4Gi"),
-		// 					"nvidia.com/gpu": resource.MustParse("1"),
-		// 				},
-		// 				Limits: v1.ResourceList{
-		// 					"cpu":            resource.MustParse("6"),
-		// 					"memory":         resource.MustParse("6Gi"),
-		// 					"nvidia.com/gpu": resource.MustParse("1"),
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
+	// terminate
+	if m.endTime.BeforeOrEqual(currentTime) {
+		events = append(events, &submitter.TerminateSubmitterEvent{})
 	}
-
-	return &pod
+	return events, err
 }
 
 func NewSubmitter(controller ControllerI) *MigrationSubmitter {
@@ -124,5 +75,9 @@ func NewSubmitter(controller ControllerI) *MigrationSubmitter {
 
 func NewSubmitterWithJobs(controller ControllerI,jobs []jobparser.PodMemory) *MigrationSubmitter {
 	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{})}
+}
+
+func NewSubmitterWithJobsWithEndTime(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time) *MigrationSubmitter {
+	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime)}
 }
 
