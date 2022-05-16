@@ -24,29 +24,33 @@ type MigrationSubmitter struct {
 	jobs []jobparser.PodMemory
 	queue jobparser.Iterator
 	endTime clock.Clock
+	migrationInProcess bool
 }
 
 func (m *MigrationSubmitter) Submit(
 	currentTime clock.Clock,
 	n algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error) {
-	migrations, err := m.controller.GetMigrations()
-	log.L.Debug("MIGRATION:",migrations,err)
-	if err != nil {
-		return nil, err
-	}
-
-	// add migrations to queue
-	for _,cmd := range migrations {
-		jobName := util.JobNameFromPod(cmd.Pod)
-		job := jobparser.GetJob(jobName,m.jobs)
-		if job == nil {
-			return nil,errors.New("could not get job")
+	if !m.migrationInProcess {
+		migrations, err := m.controller.GetMigrations()
+		if err != nil {
+			return []submitter.Event{}, err
 		}
-		migrationTime := currentTime.ToMetaV1().Time.Add(MigrationTime)
-		migratedJob := jobparser.UpdateJobForMigration(*job,migrationTime)
-
-		m.queue.Push(migratedJob)
+		
+		// add migrations to queue
+		for _,cmd := range migrations {
+			log.L.Debug("SCHEDULE MIGRATE:",cmd)
+			jobName := util.JobNameFromPod(cmd.Pod)
+			job := jobparser.GetJob(jobName,m.jobs)
+			if job == nil {
+				return nil,errors.New("could not get job")
+			}
+			migrationTime := currentTime.ToMetaV1().Time.Add(MigrationTime)
+			migratedJob := jobparser.UpdateJobForMigration(*job,migrationTime)
+	
+			m.queue.Push(migratedJob)
+			m.migrationInProcess = true
+		}
 	}
 
 	// check queue and add events
@@ -57,8 +61,10 @@ func (m *MigrationSubmitter) Submit(
 		if jobTime.BeforeOrEqual(currentTime) {
 			pod := jobparser.CreatePod(nextJob)
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
+			log.L.Debug("SUBMIT MIGRATE:",pod)
 			// TODO delete old pod but then job deleter deletes twice..
 			m.queue.Next()
+			m.migrationInProcess = false
 		} else {
 			break
 		}
@@ -68,7 +74,7 @@ func (m *MigrationSubmitter) Submit(
 	if m.endTime.BeforeOrEqual(currentTime) {
 		events = append(events, &submitter.TerminateSubmitterEvent{})
 	}
-	return events, err
+	return events, nil
 }
 
 func NewSubmitter(controller ControllerI) *MigrationSubmitter {
@@ -80,6 +86,6 @@ func NewSubmitterWithJobs(controller ControllerI,jobs []jobparser.PodMemory) *Mi
 }
 
 func NewSubmitterWithJobsWithEndTime(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time) *MigrationSubmitter {
-	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime)}
+	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime),migrationInProcess: false}
 }
 
