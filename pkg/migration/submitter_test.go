@@ -60,6 +60,16 @@ func TestMigrateMigratedJob(t *testing.T) {
 	assertJobMigratedAfterTime(t,clockNow,sut,"mmj2")
 }
 
+func TestTerminateSubmitterAtEndTime(t *testing.T) {
+	controllerStub := new(ControllerStub)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/mj2",Usage:1e9}}, nil)
+
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime) 
+	events, err := sut.Submit(clock.NewClock(endTime), nil, nil)	
+	assert.NoError(t, err)
+	assertTerminateEvent(t,events[0])
+}
+
 
 func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *migration.MigrationSubmitter, podName string) {
 	afterMigration := submissionTime.Add(migration.MigrationTime)
