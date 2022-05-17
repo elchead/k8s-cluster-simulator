@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/containerd/containerd v1.2.5
 	github.com/cpuguy83/strongerrors v0.2.1
-	github.com/elchead/k8s-migration-controller v0.0.0-20220515124803-add2c01f7bc0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.4.1
 	github.com/spf13/cobra v0.0.3
