@@ -1,10 +1,10 @@
 package migration
 
 import (
-	"errors"
 	"time"
 
-	"github.com/containerd/containerd/log"
+	"github.com/pkg/errors"
+
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
 	"github.com/elchead/k8s-cluster-simulator/pkg/metrics"
@@ -34,17 +34,14 @@ func (m *MigrationSubmitter) Submit(
 	if !m.migrationInProcess {
 		migrations, err := m.controller.GetMigrations()
 		if err != nil {
-			log.L.Info("Failed to get migrations: ",err)
-			return []submitter.Event{}, nil
+			return []submitter.Event{}, errors.Wrap(err, "failed to get migrations")
 		}
 		
 		// add migrations to queue
 		for _,cmd := range migrations {
-			log.L.Debug("SCHEDULE MIGRATE:",cmd)
 			jobName :=  util.PodNameWithoutNamespace(cmd.Pod) //util.JobNameFromPod(cmd.Pod)
 			job := jobparser.GetJob(jobName,m.jobs)
 			if job == nil {
-				log.L.Debug("Could not find job ", jobName)
 				return nil,errors.New("could not get job "+ jobName)
 			}
 			job.Name = jobName
