@@ -167,7 +167,7 @@ func (k *KubeSim) Run(ctx context.Context) error {
 			log.L.Debugf("Clock %s", k.clock.ToRFC3339())
 
 			if k.submit(met) != nil {
-				return err
+				log.L.Debug("Submit failed: ", err)
 			}
 
 			if k.schedule() != nil {
