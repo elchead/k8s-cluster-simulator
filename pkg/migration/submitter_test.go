@@ -53,6 +53,25 @@ func TestSubmitter(t *testing.T) {
 	})
 }
 
+func TestMigrateMigratedJob(t *testing.T) {
+	now := time.Now()
+	simTime := clock.NewClock(now)
+	endTime := now.Add(30 * time.Minute)
+
+	jobs := []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
+	controllerStub := new(ControllerStub)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/mj2",Usage:1e9}}, nil)	
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime) 
+	_, err := sut.Submit(simTime, nil, nil)
+	assert.NoError(t, err)
+
+
+	afterMigration := clock.NewClock(now.Add(migration.MigrationTime))
+	events, err := sut.Submit(afterMigration, nil, nil)	
+	assert.NoError(t, err)
+	assertSubmitEvent(t, events[0], "mmj2") 
+}
+
 func TestNoRepeatedCallsUntilMigrationFinished(t *testing.T) {
 	now := time.Now()
 	simTime := clock.NewClock(now)

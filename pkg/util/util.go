@@ -106,5 +106,10 @@ func PodKeyFromNames(namespace string, name string) string {
 }
 
 func JobNameFromPod(name string) string {
-	return 	strings.Split(name,"/")[1]
+	podname := PodNameWithoutNamespace(name)
+	return strings.TrimLeft(podname, "m")
+}
+
+func PodNameWithoutNamespace(name string) string {
+	return strings.Split(name,"/")[1]
 }

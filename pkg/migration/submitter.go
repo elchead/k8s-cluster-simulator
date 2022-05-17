@@ -34,7 +34,8 @@ func (m *MigrationSubmitter) Submit(
 	if !m.migrationInProcess {
 		migrations, err := m.controller.GetMigrations()
 		if err != nil {
-			return []submitter.Event{}, err
+			log.L.Info("Failed to get migrations: ",err)
+			return []submitter.Event{}, nil
 		}
 		
 		// add migrations to queue
@@ -43,8 +44,11 @@ func (m *MigrationSubmitter) Submit(
 			jobName := util.JobNameFromPod(cmd.Pod)
 			job := jobparser.GetJob(jobName,m.jobs)
 			if job == nil {
-				return nil,errors.New("could not get job")
+				log.L.Debug("Could not find job ", jobName)
+				return nil,errors.New("could not get job "+ jobName)
 			}
+			job.Name = util.PodNameWithoutNamespace(cmd.Pod)
+			
 			migrationTime := currentTime.ToMetaV1().Time.Add(MigrationTime)
 			migratedJob := jobparser.UpdateJobForMigration(*job,migrationTime)
 	
@@ -61,7 +65,6 @@ func (m *MigrationSubmitter) Submit(
 		if jobTime.BeforeOrEqual(currentTime) {
 			pod := jobparser.CreatePod(nextJob)
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
-			log.L.Debug("SUBMIT MIGRATE:",nextJob)
 			// TODO delete old pod but then job deleter deletes twice..
 			m.queue.Next()
 			m.migrationInProcess = false
