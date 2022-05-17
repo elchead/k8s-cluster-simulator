@@ -13,80 +13,62 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestSubmitter(t *testing.T) {
-	now := time.Now()
-	simTime := clock.NewClock(now)
-	endTime := now.Add(30 * time.Minute)
+var now = time.Now()
+var clockNow = clock.NewClock(now)
+var endTime = now.Add(30 * time.Minute)
+var jobs  = []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
 
-	t.Run("migrate job after 5 minutes", func(t *testing.T) {
-		jobs := []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
-		controllerStub := new(ControllerStub)
-		controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil).Once()
-		controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j1",Usage:1e9}}, nil).Once()
-		controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{}, nil).Once()
+func TestMigrateMultipleJobs(t *testing.T) {
+	controllerStub := new(ControllerStub)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil).Once()
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j1",Usage:1e9}}, nil).Once()
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{}, nil).Once()
 
-
-		sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime) 
-
-		t.Run("migrate no job yet", func(t *testing.T) {
-			events, err := sut.Submit(simTime, nil, nil)
-			assert.NoError(t, err)
-			assert.Empty(t, events)
-		})
-		
-		afterMigration := now.Add(migration.MigrationTime)
-		t.Run("migrate j2", func(t *testing.T) {
-			events, err := sut.Submit(clock.NewClock(afterMigration), nil, nil)	
-			assert.NoError(t, err)
-			assertSubmitEvent(t, events[0], "mj2")
-		})
-
-		t.Run("migrate j1", func(t *testing.T) {
-			after := afterMigration.Add(2* time.Second) 
-			sut.Submit(clock.NewClock(after), nil, nil)	// call submit to issue cmd (was blocked before)
-			
-			afterMigration = after.Add(migration.MigrationTime)
-			events, err := sut.Submit(clock.NewClock(afterMigration), nil, nil)
-			assert.NoError(t, err)
-			assertSubmitEvent(t, events[0], "mj1")
-		})
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime) 
+	t.Run("do not issue migration pod before migration time finished", func(t *testing.T) {
+		events, err := sut.Submit(clockNow, nil, nil)
+		assert.NoError(t, err)
+		assert.Empty(t, events)
+	})
+	t.Run("do not call migration controller while migration in progress", func(t *testing.T){
+		sut.Submit(clockNow, nil, nil)
+		sut.Submit(clockNow.Add(2*time.Second), nil, nil)
+		controllerStub.AssertNumberOfCalls(t, "GetMigrations", 1)	
+	})
+	
+	t.Run("migration pod is issued after migration time", func(t *testing.T) {
+		assertJobMigratedAfterTime(t,clockNow,sut,"mj2")
+		controllerStub.AssertNumberOfCalls(t, "GetMigrations", 1)
+	})
+	
+	t.Run("call migration controller again after migration finished and migrate new job", func(t *testing.T) {
+		afterMigration := clockNow.Add(migration.MigrationTime+2*time.Second)
+		sut.Submit(afterMigration, nil, nil)
+		controllerStub.AssertNumberOfCalls(t, "GetMigrations", 2)
+		assertJobMigratedAfterTime(t,afterMigration,sut,"mj1")
 	})
 }
 
 func TestMigrateMigratedJob(t *testing.T) {
-	now := time.Now()
-	simTime := clock.NewClock(now)
-	endTime := now.Add(30 * time.Minute)
-
-	jobs := []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
 	controllerStub := new(ControllerStub)
-	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/mj2",Usage:1e9}}, nil)	
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/mj2",Usage:1e9}}, nil)
+
 	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime) 
-	_, err := sut.Submit(simTime, nil, nil)
+	_, err := sut.Submit(clockNow, nil, nil)
 	assert.NoError(t, err)
 
+	assertJobMigratedAfterTime(t,clockNow,sut,"mmj2")
+}
 
-	afterMigration := clock.NewClock(now.Add(migration.MigrationTime))
-	events, err := sut.Submit(afterMigration, nil, nil)	
+
+func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *migration.MigrationSubmitter, podName string) {
+	afterMigration := submissionTime.Add(migration.MigrationTime)
+	events, err := sut.Submit(afterMigration, nil, nil)
 	assert.NoError(t, err)
-	assertSubmitEvent(t, events[0], "mmj2") 
+	assertSubmitEvent(t, events[0], podName)
 }
 
-func TestNoRepeatedCallsUntilMigrationFinished(t *testing.T) {
-	now := time.Now()
-	simTime := clock.NewClock(now)
-	endTime := now.Add(30 * time.Minute)
 
-	jobs := []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
-	controllerStub := new(ControllerStub)
-	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil)
-	
-	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime) 
-	sut.Submit(simTime, nil, nil)
-	sut.Submit(simTime, nil, nil)
-	controllerStub.AssertNumberOfCalls(t, "GetMigrations", 1)
-
-}
 
 func assertTerminateEvent(t testing.TB, event submitter.Event) {
 	assert.True(t, isTerminateEvent(event))
