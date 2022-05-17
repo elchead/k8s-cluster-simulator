@@ -3,6 +3,7 @@ package migration
 import (
 	"errors"
 
+	"github.com/containerd/containerd/log"
 	"github.com/elchead/k8s-cluster-simulator/pkg/pod"
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 )
 type Client struct {
-	UsedMemoryMap map[string]	int64 // key: nodeName
+	UsedMemoryMap map[string]int64 // key: nodeName
 	TotalMemoryMap map[string]int64 // key: nodeName
 	PodMemoryMap map[string]monitoring.PodMemMap // key: nodeName
 }
@@ -29,6 +30,7 @@ func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
 }
 
 func (c *Client) UpdatePodMetrics(pods map[string]pod.Metrics) {
+	c.PodMemoryMap = make(map[string]monitoring.PodMemMap)
 	for podname,pod := range pods {
 		c.UpdatePodMetric(podname,pod)
 	}
@@ -40,11 +42,13 @@ func (c *Client) GetPodMemories(name string) (monitoring.PodMemMap,error) {
 	if !ok {
 		return nil, errors.New("could not get pod memory for node " +name)
 	}
-	// log.L.Debug("Podmemories",name, val)
+	log.L.Debug("Podmemories",name, val)
 	return val,nil
 }
 
 func (c *Client) UpdateNodeMetrics(metrics map[string]node.Metrics) {
+	c.UsedMemoryMap = make(map[string]int64)
+	c.TotalMemoryMap = make(map[string]int64)
 	for node, metric := range metrics {
 		c.UsedMemoryMap[node] = metric.TotalResourceUsage.Memory().ScaledValue(resource.Giga)
 		c.TotalMemoryMap[node] = metric.Allocatable.Memory().ScaledValue(resource.Giga)

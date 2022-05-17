@@ -50,6 +50,12 @@ func TestUpdateMetrics(t *testing.T) {
 		assert.Equal(t,monitoring.NodeFreeMemMap{"zone2":99.,"zone3":98.},free)
 
 	})
+	t.Run("delete old metrics upon update", func(t *testing.T) {
+		metrics := map[string]node.Metrics{"zone3": createNodeMetrics(400,10)}
+		sut.UpdateNodeMetrics(metrics)
+		free,_ :=sut.GetFreeMemoryOfNodes()
+		assert.Equal(t,monitoring.NodeFreeMemMap{"zone3":97.5},free)
+	})
 	}
 
 func TestGetPodMemories(t *testing.T) {
@@ -73,9 +79,9 @@ func TestGetPodMemories(t *testing.T) {
 
 		sut.UpdatePodMetrics(map[string]pod.Metrics{"z3OLD_worker":workerMetrics,"z2_worker":z2Metrics})		
 		sut.UpdatePodMetrics(map[string]pod.Metrics{"z3_worker":workerMetrics,"z2_worker":z2Metrics})
+
 		res, err := sut.GetPodMemories("zone3")
 		assert.NoError(t, err)
-
 		t.Run("do not get pod from other node", func(t *testing.T) {
 			_,ok := res["z2_worker"]
 			assert.False(t,ok)
@@ -84,9 +90,10 @@ func TestGetPodMemories(t *testing.T) {
 			mem,ok := res["z3_worker"]
 			assert.True(t,ok)
 			assert.Equal(t, 50.,mem)
-			mem,ok = res["z3OLD_worker"]
-			assert.True(t,ok)
-			assert.Equal(t, 50.,mem)
+		})
+		t.Run("delete old metrics upon update", func(t *testing.T) {
+			_,ok := res["z3OLD_worker"]
+			assert.False(t,ok)
 		})
 	})
 
