@@ -143,13 +143,6 @@ func (k *KubeSim) AddSubmitter(name string, submitter submitter.Submitter) {
 // This method blocks until ctx is done or this KubeSim finishes processing all pods.
 func (k *KubeSim) Run(ctx context.Context) error {
 	preMetricsClock := k.clock
-	met, err := metrics.BuildMetrics(k.clock, k.nodes, k.pendingPods)
-	if err != nil {
-		return err
-	}
-
-	// log.L.Info("HI:")	
-	// update client
 
 	submitterAddedEver := len(k.submitters) > 0
 
@@ -166,16 +159,8 @@ func (k *KubeSim) Run(ctx context.Context) error {
 		default:
 			log.L.Debugf("Clock %s", k.clock.ToRFC3339())
 
-			if err :=k.submit(met); err != nil {
-				log.L.Debug("Submit failed: ", err)
-			}
-
-			if k.schedule() != nil {
-				return err
-			}
-
 			// Rebuild metrics every tick for submitters to use.
-			met, err = metrics.BuildMetrics(k.clock, k.nodes, k.pendingPods)
+			met, err := metrics.BuildMetrics(k.clock, k.nodes, k.pendingPods)
 			if err != nil {
 				return err
 			}
@@ -193,9 +178,15 @@ func (k *KubeSim) Run(ctx context.Context) error {
 			}
 			k.MigrationClient.UpdateNodeMetrics(nodeMets)
 			k.MigrationClient.UpdatePodMetrics(podMets)
-			// stats,err := k.MigrationClient.GetPodMemories("zone2")
-			// log.L.Debug("ERR:",err)
-			// log.L.Debug("PODS: ",stats)
+
+			if err :=k.submit(met); err != nil {
+				log.L.Debug("Submit failed: ", err)
+			}
+
+			if k.schedule() != nil {
+				return err
+			}
+
 
 			if k.clock.Sub(preMetricsClock) > k.metricsTick {
 				preMetricsClock = k.clock
