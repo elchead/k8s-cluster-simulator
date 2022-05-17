@@ -11,6 +11,7 @@ import (
 	cmigration "github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 )
 
 var now = time.Now()
@@ -18,69 +19,77 @@ var clockNow = clock.NewClock(now)
 var endTime = now.Add(30 * time.Minute)
 var jobs  = []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
 
-func TestMigrateMultipleJobs(t *testing.T) {
+type MigrationSuite struct {
+	suite.Suite
+	jobs []jobparser.PodMemory
+}
+
+func (suite *MigrationSuite) SetupTest() {
+	suite.jobs = make([]jobparser.PodMemory, len(jobs))
+	copy(suite.jobs, jobs)
+}
+
+func (suite *MigrationSuite) TestMigrateMultipleJobs() {
 	controllerStub := new(ControllerStub)
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil).Once()
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j1",Usage:1e9}}, nil).Once()
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{}, nil).Once()
 
-	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime) 
-	t.Run("do not issue migration pod before migration time finished", func(t *testing.T) {
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,suite.jobs,endTime) 
+	suite.Run("do not issue migration pod before migration time finished", func() {
 		events, err := sut.Submit(clockNow, nil, nil)
-		assert.NoError(t, err)
-		assert.Empty(t, events)
+		assert.NoError(suite.T(), err)
+		assert.Empty(suite.T(), events)
 	})
-	t.Run("do not call migration controller while migration in progress", func(t *testing.T){
+	suite.Run("do not call migration controller while migration in progress", func(){
 		sut.Submit(clockNow, nil, nil)
 		sut.Submit(clockNow.Add(2*time.Second), nil, nil)
-		controllerStub.AssertNumberOfCalls(t, "GetMigrations", 1)	
+		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations", 1)	
 	})
 	
-	t.Run("migration pod is issued after migration time", func(t *testing.T) {
-		assertJobMigratedAfterTime(t,clockNow,sut,"mj2")
-		controllerStub.AssertNumberOfCalls(t, "GetMigrations", 1)
+	suite.Run("migration pod is issued after migration time", func() {
+		assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mj2")
+		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations", 1)
 	})
 	
-	t.Run("call migration controller again after migration finished and migrate new job", func(t *testing.T) {
+	suite.Run("call migration controller again after migration finished and migrate new job", func() {
 		afterMigration := clockNow.Add(migration.MigrationTime+2*time.Second)
 		sut.Submit(afterMigration, nil, nil)
-		controllerStub.AssertNumberOfCalls(t, "GetMigrations", 2)
-		assertJobMigratedAfterTime(t,afterMigration,sut,"mj1")
+		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations", 2)
+		assertJobMigratedAfterTime(suite.T(),afterMigration,sut,"mj1")
 	})
 }
-
-func TestMigrateMigratedJob(t *testing.T) {
+func (suite *MigrationSuite) TestTestMigrateMigratedJob() {
 	controllerStub := new(ControllerStub)
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/mj2",Usage:1e9}}, nil)
 
-	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime) 
-	_, err := sut.Submit(clockNow, nil, nil)
-	assert.NoError(t, err)
-
-	assertJobMigratedAfterTime(t,clockNow,sut,"mmj2")
-}
-
-func TestTerminateSubmitterAtEndTime(t *testing.T) {
-	controllerStub := new(ControllerStub)
-	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/mj2",Usage:1e9}}, nil)
-
-	mjobs := jobs
+	mjobs := suite.jobs
 	mjobs[1].Name = "mj2"
 	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,mjobs,endTime) 
-	events, err := sut.Submit(clock.NewClock(endTime), nil, nil)	
-	assert.NoError(t, err)
-	assertTerminateEvent(t,events[0])
+	_, err := sut.Submit(clockNow, nil, nil)
+	assert.NoError(suite.T(), err)
+
+	assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mmj2")
 }
 
-func TestAfterMigration(t *testing.T) {
+func (suite *MigrationSuite) TestTestTerminateSubmitterAtEndTime() {
 	controllerStub := new(ControllerStub)
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil)
 
-	var jobs  = []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
-	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime)
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,suite.jobs,endTime) 
+	events, err := sut.Submit(clock.NewClock(endTime), nil, nil)	
+	assert.NoError(suite.T(), err)
+	assertTerminateEvent(suite.T(),events[0])
+}
+
+func (suite *MigrationSuite) TestAfterMigration() {
+	controllerStub := new(ControllerStub)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil)
+
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,suite.jobs,endTime)
 	sut.Submit(clockNow, nil, nil)
-	t.Run("update job name in shared slice to migration pod", func(t *testing.T){
-		assert.Equal(t,"mj2",jobs[1].Name)
+	suite.Run("update job name in shared slice to migration pod", func(){
+		assert.Equal(suite.T(),"mj2",suite.jobs[1].Name)
 	})
 	// events := assertJobMigratedAfterTime(t,clockNow,sut,"mj2")
 	// t.Run("delete old pod", func(t *testing.T){
@@ -88,6 +97,14 @@ func TestAfterMigration(t *testing.T) {
 	// })
 
 }
+
+func TestMigrationSuite(t *testing.T) {
+	suite.Run(t, new(MigrationSuite))
+}
+
+
+
+
 
 
 func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *migration.MigrationSubmitter, migratedPodName string) []submitter.Event {
