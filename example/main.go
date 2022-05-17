@@ -83,7 +83,7 @@ var rootCmd = &cobra.Command{
 
 		cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
 		requestPolicy := monitoring.NewThresholdPolicyWithCluster(40., cluster, metricClient)
-		migrationPolicy := monitoring.BigEnoughMigrator{Cluster: cluster, Client: metricClient}
+		migrationPolicy := monitoring.OptimalMigrator{Cluster: cluster, Client: metricClient}
 		migController := monitoring.NewController(requestPolicy, migrationPolicy)
 		sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTime(migController,jobs,endTime))
 		// 3. Run the main loop of KubeSim.
