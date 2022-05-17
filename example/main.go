@@ -18,10 +18,12 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/containerd/containerd/log"
+	"github.com/elchead/k8s-cluster-simulator/pkg/config"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
@@ -77,8 +79,9 @@ var rootCmd = &cobra.Command{
 		submitter := jobparser.NewJobSubmitter(jobs)
 		sim.AddSubmitter("JobSubmitter", submitter)
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
+		
 
-		cluster := monitoring.NewCluster()
+		cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
 		requestPolicy := monitoring.NewThresholdPolicyWithCluster(40., cluster, metricClient)
 		migrationPolicy := monitoring.BigEnoughMigrator{Cluster: cluster, Client: metricClient}
 		migController := monitoring.NewController(requestPolicy, migrationPolicy)
@@ -128,6 +131,15 @@ func buildScheduler() scheduler.Scheduler {
 	// })
 
 	return &sched
+}
+
+func getNodeSize(conf *config.Config) float64 {
+	nodeSzStr := conf.Cluster[0].Status.Allocatable["memory"]
+	nodeSz, err := strconv.ParseFloat(nodeSzStr[:len(nodeSzStr)-2], 64)
+	if err != nil {
+		log.L.Fatal("Failed to parse node size:", err)
+	}
+	return nodeSz
 }
 
 func newInterruptableContext() context.Context {
