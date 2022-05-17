@@ -1,8 +1,10 @@
 package migration
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/containerd/containerd/log"
 	"github.com/pkg/errors"
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
@@ -42,13 +44,14 @@ func (m *MigrationSubmitter) Submit(
 			jobName :=  util.PodNameWithoutNamespace(cmd.Pod) //util.JobNameFromPod(cmd.Pod)
 			job := jobparser.GetJob(jobName,m.jobs)
 			if job == nil {
-				return nil,errors.New("could not get job "+ jobName)
+				return nil,fmt.Errorf("could not get job %s",jobName)
 			}
 			job.Name = jobName
 
 			migrationTime := currentTime.ToMetaV1().Time.Add(MigrationTime)
 			jobparser.UpdateJobForMigration(job,migrationTime)
 	
+			log.L.Debug("push to queue:", job.Name)
 			m.queue.Push(*job)
 			m.migrationInProcess = true
 		}
@@ -60,6 +63,7 @@ func (m *MigrationSubmitter) Submit(
 		nextJob := m.queue.Value()
 		jobTime := clock.NewClock(nextJob.StartAt)
 		if jobTime.BeforeOrEqual(currentTime) {
+			log.L.Debug("pop from queue:", nextJob.Name)
 			pod := jobparser.CreatePod(nextJob)
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
 
