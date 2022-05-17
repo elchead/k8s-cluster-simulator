@@ -27,8 +27,6 @@ func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
 	} 
 	podmap := c.PodMemoryMap[pd.Node]
 	podmap[podname] = float64(intUsage)
-	// for name, value := range pods {
-	// }
 }
 
 func (c *Client) UpdatePodMetrics(pods map[string]pod.Metrics) {
@@ -75,7 +73,7 @@ func (c *Client) 	GetFreeMemoryOfNodes() (monitoring.NodeFreeMemMap, error) {
 		}
 		res[node] = free
 	}
-	log.L.Debug("Nodememory",res )
+	// log.L.Debug("Nodememory",res )
 
 	return res, nil
 }

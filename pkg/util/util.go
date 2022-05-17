@@ -113,3 +113,7 @@ func JobNameFromPod(name string) string {
 func PodNameWithoutNamespace(name string) string {
 	return strings.Split(name,"/")[1]
 }
+
+func GetOldPodName(name string) string {
+	return strings.Replace(name,"m","",1)
+}

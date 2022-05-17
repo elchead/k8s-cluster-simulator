@@ -91,10 +91,10 @@ func (suite *MigrationSuite) TestAfterMigration() {
 	suite.Run("update job name in shared slice to migration pod", func(){
 		assert.Equal(suite.T(),"mj2",suite.jobs[1].Name)
 	})
-	// events := assertJobMigratedAfterTime(t,clockNow,sut,"mj2")
-	// t.Run("delete old pod", func(t *testing.T){
-	// 	assert.Equal(t,1,events[1])
-	// })
+	suite.Run("delete old pod", func(){
+		events := assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mj2")
+		assertDeleteEvent(suite.T(),events[1],"j2")
+	})
 
 }
 
@@ -124,6 +124,12 @@ func assertTerminateEvent(t testing.TB, event submitter.Event) {
 func isTerminateEvent(event submitter.Event) (ok bool) {
 	_, ok = event.(*submitter.TerminateSubmitterEvent)
 	return
+}
+
+func assertDeleteEvent(t testing.TB, event submitter.Event, podName string) {
+	delete, ok := event.(*submitter.DeleteEvent)
+	assert.True(t, ok)
+	assert.Equal(t, podName, delete.PodName)
 }
 
 

@@ -65,9 +65,10 @@ func (m *MigrationSubmitter) Submit(
 		if jobTime.BeforeOrEqual(currentTime) {
 			pod := jobparser.CreatePod(nextJob)
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
-			
 
-			// TODO delete old pod but then job deleter deletes twice..
+			oldPod := util.GetOldPodName(pod.Name)
+			events = append(events, &submitter.DeleteEvent{PodNamespace: "default", PodName: oldPod})
+			
 			m.queue.Next()
 			m.migrationInProcess = false
 		} else {

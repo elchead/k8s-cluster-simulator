@@ -18,13 +18,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/elchead/k8s-cluster-simulator/pkg/util"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/apis/scheduling"
-
-	"github.com/elchead/k8s-cluster-simulator/pkg/util"
 )
 
 func resourceListEq(r1, r2 v1.ResourceList) bool {
@@ -243,4 +242,11 @@ func TestPodKey(t *testing.T) {
 		},
 	})
 	assert.EqualError(t, err, "Empty pod name")
+}
+
+func TestGetOldPodName(t *testing.T) {
+	t.Run("remove one m", func(t *testing.T) {
+		assert.Equal(t,"pod",util.GetOldPodName("mpod"))
+		assert.Equal(t,"mpod",util.GetOldPodName("mmpod"))
+	})
 }
