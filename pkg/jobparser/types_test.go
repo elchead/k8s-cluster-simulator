@@ -18,4 +18,9 @@ func TestGetJob(t *testing.T){
 		assert.NotNil(t, job)
 		assert.Equal(t,"j2",job.Name)
 	})
+	t.Run("Changing the job pointer also mutates the original slice",func(t *testing.T){
+		job := jobparser.GetJob("j2",jobs)
+		job.Name = "mj2"
+		assert.Equal(t,"mj2",jobs[1].Name)
+	})
 }

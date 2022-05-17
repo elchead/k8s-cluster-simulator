@@ -18,9 +18,9 @@ type Record struct {
 }
 
 func GetJob(name string,jobs []PodMemory) *PodMemory {  
-	for _, job := range jobs {
-		if job.Name == name {
-			return &job
+	for i, _ := range jobs {
+		if jobs[i].Name == name {
+			return &jobs[i]
 		}
 	}
 	return nil
