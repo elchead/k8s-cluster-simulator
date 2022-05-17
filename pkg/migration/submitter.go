@@ -41,18 +41,18 @@ func (m *MigrationSubmitter) Submit(
 		// add migrations to queue
 		for _,cmd := range migrations {
 			log.L.Debug("SCHEDULE MIGRATE:",cmd)
-			jobName := util.JobNameFromPod(cmd.Pod)
+			jobName :=  util.PodNameWithoutNamespace(cmd.Pod) //util.JobNameFromPod(cmd.Pod)
 			job := jobparser.GetJob(jobName,m.jobs)
 			if job == nil {
 				log.L.Debug("Could not find job ", jobName)
 				return nil,errors.New("could not get job "+ jobName)
 			}
-			job.Name = util.PodNameWithoutNamespace(cmd.Pod)
-			
+			job.Name = jobName
+
 			migrationTime := currentTime.ToMetaV1().Time.Add(MigrationTime)
-			migratedJob := jobparser.UpdateJobForMigration(*job,migrationTime)
+			jobparser.UpdateJobForMigration(job,migrationTime)
 	
-			m.queue.Push(migratedJob)
+			m.queue.Push(*job)
 			m.migrationInProcess = true
 		}
 	}
@@ -65,6 +65,8 @@ func (m *MigrationSubmitter) Submit(
 		if jobTime.BeforeOrEqual(currentTime) {
 			pod := jobparser.CreatePod(nextJob)
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
+			
+
 			// TODO delete old pod but then job deleter deletes twice..
 			m.queue.Next()
 			m.migrationInProcess = false

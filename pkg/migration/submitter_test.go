@@ -64,18 +64,38 @@ func TestTerminateSubmitterAtEndTime(t *testing.T) {
 	controllerStub := new(ControllerStub)
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/mj2",Usage:1e9}}, nil)
 
-	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime) 
+	mjobs := jobs
+	mjobs[1].Name = "mj2"
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,mjobs,endTime) 
 	events, err := sut.Submit(clock.NewClock(endTime), nil, nil)	
 	assert.NoError(t, err)
 	assertTerminateEvent(t,events[0])
 }
 
+func TestAfterMigration(t *testing.T) {
+	controllerStub := new(ControllerStub)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil)
 
-func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *migration.MigrationSubmitter, podName string) {
+	var jobs  = []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime)
+	sut.Submit(clockNow, nil, nil)
+	t.Run("update job name in shared slice to migration pod", func(t *testing.T){
+		assert.Equal(t,"mj2",jobs[1].Name)
+	})
+	// events := assertJobMigratedAfterTime(t,clockNow,sut,"mj2")
+	// t.Run("delete old pod", func(t *testing.T){
+	// 	assert.Equal(t,1,events[1])
+	// })
+
+}
+
+
+func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *migration.MigrationSubmitter, migratedPodName string) []submitter.Event {
 	afterMigration := submissionTime.Add(migration.MigrationTime)
 	events, err := sut.Submit(afterMigration, nil, nil)
 	assert.NoError(t, err)
-	assertSubmitEvent(t, events[0], podName)
+	assertSubmitEvent(t, events[0], migratedPodName)
+	return events
 }
 
 
