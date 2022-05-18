@@ -31,25 +31,25 @@ func (m *MigrationChecker) StartMigration(t clock.Clock) {
 	m.migrationStart = t
 }
 
-func (m *MigrationChecker) MigrationFinished(lastMigrationFinished clock.Clock) {
-	m.lastMigrationFinished = lastMigrationFinished
+func (m *MigrationChecker) GetMigrationFinishTime() clock.Clock {
+	return m.migrationStart.Add(MigrationTime)
 }
 
-func (m *MigrationChecker) IsReady(current clock.Clock) bool { return m.migrationStart.Add(MigrationTime+BackoffInterval).BeforeOrEqual(current) && m.lastMigrationFinished.Add(BackoffInterval).BeforeOrEqual(current) } 
+func (m *MigrationChecker) IsReady(current clock.Clock) bool { return m.GetMigrationFinishTime().Add(BackoffInterval).BeforeOrEqual(current) } 
 
 type MigrationSubmitter struct {
 	controller ControllerI
 	jobs []jobparser.PodMemory
 	queue jobparser.Iterator
 	endTime clock.Clock
-	migrationChecker MigrationChecker
+	checker MigrationChecker
 }
 
 func (m *MigrationSubmitter) Submit(
 	currentTime clock.Clock,
 	n algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error) {
-	if m.migrationChecker.IsReady(currentTime) {
+	if m.checker.IsReady(currentTime) {
 		migrations, err := m.controller.GetMigrations()
 		if err != nil {
 			return []submitter.Event{}, errors.Wrap(err, "failed to get migrations")
@@ -63,13 +63,11 @@ func (m *MigrationSubmitter) Submit(
 				return nil,fmt.Errorf("could not get job %s",jobName)
 			}
 			job.Name = jobName
-
-			migrationTime := currentTime.ToMetaV1().Time.Add(MigrationTime)
-			jobparser.UpdateJobForMigration(job,migrationTime)
-	
+			
+			m.checker.StartMigration(currentTime)
+			jobparser.UpdateJobForMigration(job,m.checker.GetMigrationFinishTime().ToMetaV1().Time)
 			log.L.Debug("push to queue:", job.Name)
 			m.queue.Push(*job)
-			m.migrationChecker.StartMigration(currentTime)
 		}
 	}
 

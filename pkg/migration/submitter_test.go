@@ -167,22 +167,6 @@ func (c *ControllerStub) GetMigrations() (migrations []cmigration.MigrationCmd, 
 	return args.Get(0).([]cmigration.MigrationCmd), args.Error(1)
 }
 
-
-func TestChecker(t *testing.T) {
-	sut := migration.MigrationChecker{}
-	t.Run("ready in beginning", func(t *testing.T){
-		assert.True(t,sut.IsReady(clockNow))
-	})
-	sut.MigrationFinished(clockNow)
-
-	t.Run("not ready before backoff", func(t *testing.T){
-		assert.False(t,sut.IsReady(clockNow.Add(1*time.Second)))
-	})
-	t.Run("ready after backoff", func(t *testing.T){
-		assert.True(t,sut.IsReady(clockNow.Add(migration.BackoffInterval)))
-	})
-}
-
 func TestCheckerMigrationProcess(t *testing.T) {
 	sut := migration.MigrationChecker{}
 	t.Run("not ready during migration", func(t *testing.T){
