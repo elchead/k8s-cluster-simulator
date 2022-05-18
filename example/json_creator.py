@@ -27,13 +27,15 @@ with open("./example/pod_500.json", "r") as f:
     for d in data:
         container = d["dimensions"][0]
         memory = d["values"]
+        time = d["timestamps"]
         try:
             podname = id_to_pod[container]
         except KeyError:
             # print(memory)
             not_found_ids.append(container)
 
-        pod = {"Name": podname, "Memory": memory}
+
+        pod = {"Name": podname, "Memory": memory, "Times":time}
         pods.append(pod)
 
     with open("./example/pods.json", "w") as outfile:
