@@ -24,20 +24,24 @@ type ControllerI interface {
 
 type MigrationChecker struct {
 	lastMigrationFinished clock.Clock
+	migrationStart clock.Clock
+}
+
+func (m *MigrationChecker) StartMigration(t clock.Clock) {
+	m.migrationStart = t
 }
 
 func (m *MigrationChecker) MigrationFinished(lastMigrationFinished clock.Clock) {
 	m.lastMigrationFinished = lastMigrationFinished
 }
 
-func (m *MigrationChecker) IsReady(current clock.Clock) bool { return m.lastMigrationFinished.Add(BackoffInterval).BeforeOrEqual(current) } 
+func (m *MigrationChecker) IsReady(current clock.Clock) bool { return m.migrationStart.Add(MigrationTime+BackoffInterval).BeforeOrEqual(current) && m.lastMigrationFinished.Add(BackoffInterval).BeforeOrEqual(current) } 
 
 type MigrationSubmitter struct {
 	controller ControllerI
 	jobs []jobparser.PodMemory
 	queue jobparser.Iterator
 	endTime clock.Clock
-	migrationInProcess bool
 	migrationChecker MigrationChecker
 }
 
@@ -45,7 +49,7 @@ func (m *MigrationSubmitter) Submit(
 	currentTime clock.Clock,
 	n algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error) {
-	if !m.migrationInProcess && m.migrationChecker.IsReady(currentTime) {
+	if m.migrationChecker.IsReady(currentTime) {
 		migrations, err := m.controller.GetMigrations()
 		if err != nil {
 			return []submitter.Event{}, errors.Wrap(err, "failed to get migrations")
@@ -65,7 +69,7 @@ func (m *MigrationSubmitter) Submit(
 	
 			log.L.Debug("push to queue:", job.Name)
 			m.queue.Push(*job)
-			m.migrationInProcess = true
+			m.migrationChecker.StartMigration(currentTime)
 		}
 	}
 
@@ -83,8 +87,6 @@ func (m *MigrationSubmitter) Submit(
 			events = append(events, &submitter.DeleteEvent{PodNamespace: "default", PodName: oldPod})
 			
 			m.queue.Next()
-			m.migrationInProcess = false
-			m.migrationChecker.MigrationFinished(currentTime)
 		} else {
 			break
 		}
@@ -106,6 +108,6 @@ func NewSubmitterWithJobs(controller ControllerI,jobs []jobparser.PodMemory) *Mi
 }
 
 func NewSubmitterWithJobsWithEndTime(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time) *MigrationSubmitter {
-	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime),migrationInProcess: false}
+	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime)}
 }
 

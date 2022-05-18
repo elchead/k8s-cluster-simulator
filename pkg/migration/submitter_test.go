@@ -52,8 +52,8 @@ func (suite *MigrationSuite) TestMigrateMultipleJobs() {
 		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations", 1)
 	})
 	
-	suite.Run("call migration controller again after migration finished and migrate new job", func() {
-		afterMigration := clockNow.Add(migration.MigrationTime+2*time.Second)
+	suite.Run("call migration controller again after migration + backoff and migrate new job", func() {
+		afterMigration := clockNow.Add(migration.MigrationTime+migration.BackoffInterval)
 		sut.Submit(afterMigration, nil, nil)
 		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations", 2)
 		assertJobMigratedAfterTime(suite.T(),afterMigration,sut,"mj1")
@@ -127,11 +127,6 @@ func TestMigrationSuite(t *testing.T) {
 	suite.Run(t, new(MigrationSuite))
 }
 
-
-
-
-
-
 func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *migration.MigrationSubmitter, migratedPodName string) []submitter.Event {
 	afterMigration := submissionTime.Add(migration.MigrationTime)
 	events, err := sut.Submit(afterMigration, nil, nil)
@@ -185,5 +180,19 @@ func TestChecker(t *testing.T) {
 	})
 	t.Run("ready after backoff", func(t *testing.T){
 		assert.True(t,sut.IsReady(clockNow.Add(migration.BackoffInterval)))
+	})
+}
+
+func TestCheckerMigrationProcess(t *testing.T) {
+	sut := migration.MigrationChecker{}
+	t.Run("not ready during migration", func(t *testing.T){
+		sut.StartMigration(clockNow)
+		assert.False(t,sut.IsReady(clockNow.Add(migration.BackoffInterval)))
+	})
+	t.Run("not ready before backoff", func(t *testing.T){
+		assert.False(t,sut.IsReady(clockNow.Add(1*time.Second)))
+	})
+	t.Run("ready after backoff", func(t *testing.T){
+		assert.True(t,sut.IsReady(clockNow.Add(migration.MigrationTime + migration.BackoffInterval)))
 	})
 }
