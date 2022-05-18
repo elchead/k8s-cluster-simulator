@@ -23,7 +23,6 @@ type ControllerI interface {
 }
 
 type MigrationChecker struct {
-	lastMigrationFinished clock.Clock
 	migrationStart clock.Clock
 }
 
@@ -52,26 +51,24 @@ func (m *MigrationSubmitter) Submit(
 	if m.checker.IsReady(currentTime) {
 		migrations, err := m.controller.GetMigrations()
 		if err != nil {
-			return []submitter.Event{}, errors.Wrap(err, "failed to get migrations")
+			return []submitter.Event{}, errors.Wrap(err, "migration controller failed")
 		}
-		
-		// add migrations to queue
-		for _,cmd := range migrations {
-			jobName :=  util.PodNameWithoutNamespace(cmd.Pod) 
-			job := jobparser.GetJob(jobName,m.jobs)
-			if job == nil {
-				return nil,fmt.Errorf("could not get job %s",jobName)
-			}
-			job.Name = jobName
-			
-			m.checker.StartMigration(currentTime)
-			jobparser.UpdateJobForMigration(job,m.checker.GetMigrationFinishTime().ToMetaV1().Time)
-			log.L.Debug("push to queue:", job.Name)
-			m.queue.Push(*job)
+		err = m.startMigrations(migrations, currentTime)
+		if err != nil {
+			return []submitter.Event{}, errors.Wrap(err, "failed to start migration")
 		}
 	}
+	events := m.getEventsFromMigrations(currentTime)
 
-	// check queue and add events
+	// terminate
+	isSimulationFinished := m.endTime.BeforeOrEqual(currentTime)
+	if isSimulationFinished {
+		events = append(events, &submitter.TerminateSubmitterEvent{})
+	}
+	return events, nil
+}
+
+func (m *MigrationSubmitter) getEventsFromMigrations(currentTime clock.Clock) []submitter.Event {
 	events := make([]submitter.Event, 0, m.queue.RemainingValues()+1)
 	for m.queue.ExistNext() || m.queue.RemainingValues() == 1 {
 		nextJob := m.queue.Value()
@@ -83,18 +80,30 @@ func (m *MigrationSubmitter) Submit(
 
 			oldPod := util.GetOldPodName(pod.Name)
 			events = append(events, &submitter.DeleteEvent{PodNamespace: "default", PodName: oldPod})
-			
+
 			m.queue.Next()
 		} else {
 			break
 		}
 	}
+	return events
+}
 
-	// terminate
-	if m.endTime.BeforeOrEqual(currentTime) {
-		events = append(events, &submitter.TerminateSubmitterEvent{})
+func (m *MigrationSubmitter) startMigrations(migrations []migration.MigrationCmd, currentTime clock.Clock) error {
+	for _, cmd := range migrations {
+		jobName := util.PodNameWithoutNamespace(cmd.Pod)
+		job := jobparser.GetJob(jobName, m.jobs)
+		if job == nil {
+			return fmt.Errorf("could not get job %s", jobName)
+		}
+		job.Name = jobName
+
+		m.checker.StartMigration(currentTime)
+		jobparser.UpdateJobForMigration(job, m.checker.GetMigrationFinishTime().ToMetaV1().Time)
+		log.L.Debug("push to queue:", job.Name)
+		m.queue.Push(*job)
 	}
-	return events, nil
+	return nil
 }
 
 func NewSubmitter(controller ControllerI) *MigrationSubmitter {
