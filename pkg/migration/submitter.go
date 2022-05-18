@@ -17,9 +17,20 @@ import (
 )
 
 const MigrationTime = 5 * time.Minute
+const BackoffInterval = 45 * time.Second
 type ControllerI interface {
 	GetMigrations() (migrations []migration.MigrationCmd, err error)
 }
+
+type MigrationChecker struct {
+	lastMigrationFinished clock.Clock
+}
+
+func (m *MigrationChecker) MigrationFinished(lastMigrationFinished clock.Clock) {
+	m.lastMigrationFinished = lastMigrationFinished
+}
+
+func (m *MigrationChecker) IsReady(current clock.Clock) bool { return m.lastMigrationFinished.Add(BackoffInterval).BeforeOrEqual(current) } 
 
 type MigrationSubmitter struct {
 	controller ControllerI
@@ -27,13 +38,14 @@ type MigrationSubmitter struct {
 	queue jobparser.Iterator
 	endTime clock.Clock
 	migrationInProcess bool
+	migrationChecker MigrationChecker
 }
 
 func (m *MigrationSubmitter) Submit(
 	currentTime clock.Clock,
 	n algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error) {
-	if !m.migrationInProcess {
+	if !m.migrationInProcess && m.migrationChecker.IsReady(currentTime) {
 		migrations, err := m.controller.GetMigrations()
 		if err != nil {
 			return []submitter.Event{}, errors.Wrap(err, "failed to get migrations")
@@ -41,7 +53,7 @@ func (m *MigrationSubmitter) Submit(
 		
 		// add migrations to queue
 		for _,cmd := range migrations {
-			jobName :=  util.PodNameWithoutNamespace(cmd.Pod) //util.JobNameFromPod(cmd.Pod)
+			jobName :=  util.PodNameWithoutNamespace(cmd.Pod) 
 			job := jobparser.GetJob(jobName,m.jobs)
 			if job == nil {
 				return nil,fmt.Errorf("could not get job %s",jobName)
@@ -72,6 +84,7 @@ func (m *MigrationSubmitter) Submit(
 			
 			m.queue.Next()
 			m.migrationInProcess = false
+			m.migrationChecker.MigrationFinished(currentTime)
 		} else {
 			break
 		}

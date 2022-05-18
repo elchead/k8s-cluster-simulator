@@ -59,7 +59,7 @@ func (suite *MigrationSuite) TestMigrateMultipleJobs() {
 		assertJobMigratedAfterTime(suite.T(),afterMigration,sut,"mj1")
 	})
 }
-func (suite *MigrationSuite) TestTestMigrateMigratedJob() {
+func (suite *MigrationSuite) TestMigrateMigratedJob() {
 	controllerStub := new(ControllerStub)
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/mj2",Usage:1e9}}, nil)
 
@@ -70,6 +70,31 @@ func (suite *MigrationSuite) TestTestMigrateMigratedJob() {
 	assert.NoError(suite.T(), err)
 
 	assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mmj2")
+}
+
+func (suite *MigrationSuite) TestBackoffIntervalAfterMigration() {
+	controllerStub := new(ControllerStub)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil)
+
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,suite.jobs,endTime) 
+	sut.Submit(clockNow,nil, nil)
+	controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",1)
+
+	assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mj2")
+	controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",1)
+
+	suite.Run("do not call controller before backoff interval", func(){
+		beforeBackOff := clockNow.Add(migration.MigrationTime + 20 * time.Second)
+		sut.Submit(beforeBackOff,nil, nil)	
+		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",1)
+	})
+
+	suite.Run("call controller after backoff", func(){
+		afterBackOff := clockNow.Add(migration.MigrationTime + migration.BackoffInterval)
+		sut.Submit(afterBackOff,nil, nil)	
+		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",2)	
+	})
+
 }
 
 func (suite *MigrationSuite) TestTestTerminateSubmitterAtEndTime() {
@@ -148,4 +173,17 @@ func (c *ControllerStub) GetMigrations() (migrations []cmigration.MigrationCmd, 
 }
 
 
+func TestChecker(t *testing.T) {
+	sut := migration.MigrationChecker{}
+	t.Run("ready in beginning", func(t *testing.T){
+		assert.True(t,sut.IsReady(clockNow))
+	})
+	sut.MigrationFinished(clockNow)
 
+	t.Run("not ready before backoff", func(t *testing.T){
+		assert.False(t,sut.IsReady(clockNow.Add(1*time.Second)))
+	})
+	t.Run("ready after backoff", func(t *testing.T){
+		assert.True(t,sut.IsReady(clockNow.Add(migration.BackoffInterval)))
+	})
+}
