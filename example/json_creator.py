@@ -1,5 +1,6 @@
 import json
-import matplotlib.pyplot as plt
+
+# import matplotlib.pyplot as plt
 
 id_to_pod = {}
 with open("./example/entities_pods.json", "r") as f:
@@ -34,8 +35,7 @@ with open("./example/pod_500.json", "r") as f:
             # print(memory)
             not_found_ids.append(container)
 
-
-        pod = {"Name": podname, "Memory": memory, "Times":time}
+        pod = {"Name": podname, "Memory": memory, "Time": time}
         pods.append(pod)
 
     with open("./example/pods.json", "w") as outfile:

@@ -2,6 +2,10 @@ package jobparser
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
 	"time"
 )
 
@@ -11,21 +15,30 @@ type JobData struct {
 	Time []int64 `json:"Time"`
 }
 
-func ParseJson(data []byte) ([]PodMemory, error) {
+func ParsePodMemoriesFromJson(reader io.Reader) ([]PodMemory, error) {
 	var jobs []JobData
-	err := json.Unmarshal(data, &jobs)
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %v",err)
+	}
+	err = json.Unmarshal(data, &jobs)
 	if err != nil {
 		return nil, err
 	}
 	
 	pods := make([]PodMemory, 0,len(jobs))
 	for _, job := range jobs {
-		pods = append(pods,parseJobJson(job))
+		pod, err := parseJobJson(job)
+		if err != nil {
+			log.Println("Removing pod because:", err)
+		}
+		pods = append(pods,pod)
 	}
+	SortPodMemoriesByTime(pods)
 	return pods, nil
 }
 
-func parseJobJson(job JobData) PodMemory {
+func parseJobJson(job JobData) (PodMemory,error) {
 	var podMemory PodMemory
 	podMemory.Name = job.Name
 	podMemory.Records = make([]Record, len(job.Memory))
@@ -34,5 +47,6 @@ func parseJobJson(job JobData) PodMemory {
 		t := job.Time[i] / 1e3
 		podMemory.Records[i].Time = time.Unix(t, 0)
 	}
-	return podMemory
+	err := SetStartTime(&podMemory)
+	return podMemory,err
 }
