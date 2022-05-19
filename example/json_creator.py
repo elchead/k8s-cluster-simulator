@@ -3,7 +3,7 @@ import json
 # import matplotlib.pyplot as plt
 
 id_to_pod = {}
-with open("./example/entities_pods.json", "r") as f:
+with open("./example/entities_12:5-8-12.json", "r") as f:
     res = json.load(f)
     ents = res["entities"]
     for e in ents:
@@ -21,7 +21,7 @@ with open("./example/entities_pods.json", "r") as f:
 # print(id_to_pod)
 
 not_found_ids = []
-with open("./example/pod_500.json", "r") as f:
+with open("./example/pod_500_12:5-8-12.json", "r") as f:
     res = json.load(f)
     data = res["result"][0]["data"]
     pods = []
@@ -38,6 +38,7 @@ with open("./example/pod_500.json", "r") as f:
         pod = {"Name": podname, "Memory": memory, "Time": time}
         pods.append(pod)
 
+    print("Found", len(pods), "pods")
     with open("./example/pods.json", "w") as outfile:
         json.dump(pods, outfile)
 print(not_found_ids)
