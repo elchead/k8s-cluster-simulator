@@ -2,6 +2,7 @@ package migration
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/containerd/containerd/log"
@@ -22,16 +23,27 @@ type ControllerI interface {
 	GetMigrations() (migrations []migration.MigrationCmd, err error)
 }
 
+func GetMigrationTime(gbSz float64) time.Duration {
+	return time.Duration(math.Ceil(3.3506*gbSz))*time.Second
+}
+
 type MigrationChecker struct {
 	migrationStart clock.Clock
+	migrationDuration time.Duration
 }
 
 func (m *MigrationChecker) StartMigration(t clock.Clock) {
 	m.migrationStart = t
+	m.migrationDuration = MigrationTime
+}
+
+func (m *MigrationChecker) StartMigrationWithSize(t clock.Clock,size float64)  {
+	m.migrationStart = t
+	m.migrationDuration = GetMigrationTime(size)
 }
 
 func (m *MigrationChecker) GetMigrationFinishTime() clock.Clock {
-	return m.migrationStart.Add(MigrationTime)
+	return m.migrationStart.Add(m.migrationDuration)
 }
 
 func (m *MigrationChecker) IsReady(current clock.Clock) bool { return m.GetMigrationFinishTime().Add(BackoffInterval).BeforeOrEqual(current) } 

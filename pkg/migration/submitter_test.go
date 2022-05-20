@@ -180,3 +180,7 @@ func TestCheckerMigrationProcess(t *testing.T) {
 		assert.True(t,sut.IsReady(clockNow.Add(migration.MigrationTime + migration.BackoffInterval)))
 	})
 }
+
+func TestGetMigrationTime(t *testing.T) {
+	assert.Equal(t,168*time.Second,migration.GetMigrationTime(50))
+}
