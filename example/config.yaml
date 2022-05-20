@@ -8,7 +8,7 @@ tick: 10
 
 # Start time at which the simulation starts, in RFC3339 format.
 # Optional (default: now)
-startClock: 2022-05-11T08:00:00Z
+startClock: 2022-05-11T08:00:00+02:00
 #2019-01-01T00:00:00+09:00
 
 # Interval duration for logging metrics of the cluster, in seconds.
