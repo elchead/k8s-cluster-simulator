@@ -2,9 +2,12 @@ package jobparser
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/containerd/containerd/log"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -50,7 +53,21 @@ func MigratePod(job PodMemory,migration time.Time) *v1.Pod {
 	return CreatePod(job)
 }
 
+func GetJobSizeFromName(name string) (string, error) {
+	s := strings.Split(name, "-")
+	if s[0] == name || len(s) < 2 {
+		return "", fmt.Errorf("job size of %s could not be deduced",name)
+	} else {
+		return s[2],nil
+	}
+}
+
 func CreatePod(podinfo PodMemory) *v1.Pod {
+	size,err := GetJobSizeFromName(podinfo.Name)
+	if err != nil {
+		log.L.Info("Setting job size to s since:",err)
+		size = "s"
+	}
 	simSpec := ""
 	cpu := "8" // s: 5-10; m: 8-10; l:8-10
 	startTime := podinfo.Records[0].Time
@@ -75,27 +92,56 @@ func CreatePod(podinfo PodMemory) *v1.Pod {
 				"simSpec": simSpec,
 			},
 		},
-		// Spec: v1.PodSpec{
-
-		// 	Containers: []v1.Container{
-		// 		{
-		// 			Name:  "container",
-		// 			Image: "container",
-		// 			Resources: v1.ResourceRequirements{
-		// 				Requests: v1.ResourceList{
-		// 					"cpu":    resource.MustParse(cpu),
-		// 					"memory": resource.MustParse("4Gi"),
-		// 				},
-		// 				// Limits: v1.ResourceList{
-		// 				// 	"cpu":            resource.MustParse("6"),
-		// 				// 	"memory":         resource.MustParse("6Gi"),
-		// 				// 	"nvidia.com/gpu": resource.MustParse("1"),
-		// 				// },
-		// 			},
-		// 		},
-		// 	},
-		// },
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:  "worker",
+					Image: "worker-image",
+					Resources: GetJobResources(size),
+				},
+			},
+		},
 	}
 
 	return &pod
+}
+
+func GetJobResourceRequest(size string) v1.ResourceList {
+	switch size {
+	case "s":
+		return v1.ResourceList{
+			"cpu":            resource.MustParse("5"),
+			"memory":         resource.MustParse("30Gi"),
+		      }
+	case "m":
+		return 	v1.ResourceList{
+			"cpu":            resource.MustParse("8"),
+			"memory":         resource.MustParse("80Gi"),
+		      }
+	case "l": return v1.ResourceList{
+			"cpu":            resource.MustParse("8"),
+			"memory":         resource.MustParse("130Gi"),
+		      }
+
+	case "xl": return v1.ResourceList{
+			"cpu":            resource.MustParse("8"),
+			"memory":         resource.MustParse("420Gi"),
+		      }
+	default:
+		return v1.ResourceList{}
+	}
+}
+
+func GetJobResourceLimit() v1.ResourceList {
+	return v1.ResourceList{
+		"cpu":            resource.MustParse("10"),
+		"memory":         resource.MustParse("430Gi"),
+	      }
+}
+
+func GetJobResources(size string) v1.ResourceRequirements {
+	return v1.ResourceRequirements{
+		Requests: GetJobResourceRequest(size),
+		Limits: GetJobResourceLimit(),
+	}
 }

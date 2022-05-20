@@ -15,6 +15,15 @@ type JobData struct {
 	Time []int64 `json:"Time"`
 }
 
+func FindJob(name string, jobs []PodMemory) *PodMemory {
+	for _, job := range jobs {
+		if job.Name == name {
+			return &job
+		}
+	}
+	return nil
+}
+
 func ParsePodMemoriesFromJson(reader io.Reader) ([]PodMemory, error) {
 	var jobs []JobData
 	data, err := ioutil.ReadAll(reader)

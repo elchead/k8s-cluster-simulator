@@ -3,7 +3,6 @@ package migration
 import (
 	"errors"
 
-	"github.com/containerd/containerd/log"
 	"github.com/elchead/k8s-cluster-simulator/pkg/pod"
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -42,7 +41,7 @@ func (c *Client) GetPodMemories(name string) (monitoring.PodMemMap,error) {
 	if !ok {
 		return nil, errors.New("could not get pod memory for node " +name)
 	}
-	log.L.Debug("Podmemories",name, val)
+	// log.L.Debug("Podmemories",name, val)
 	return val,nil
 }
 

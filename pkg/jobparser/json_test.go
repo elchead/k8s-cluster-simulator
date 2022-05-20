@@ -17,3 +17,14 @@ func TestParseJson(t *testing.T) {
 	assert.Equal(t, jobs[0].Records[1].Usage, float64(32589617152))
 	assert.Equal(t, jobs[0].Records[1].Time, time.Unix(int64(1652248865),0))
 }
+
+// func TestLoadJobs(t *testing.T) {
+// 	file, err := os.Open("../../example/pods.json")
+// 	assert.NoError(t, err)
+// 	jobs,err := jobparser.ParsePodMemoriesFromJson(file)
+// 	job := jobparser.FindJob("o10n-worker-l-2xs2w-c7hh4",jobs)
+// 	podspec := jobparser.CreatePod(*job)
+// 	assert.Equal(t,true,podspec.Annotations["simSpec"])
+// }
+
+

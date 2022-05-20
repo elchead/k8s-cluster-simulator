@@ -91,6 +91,7 @@ func (status Status) MarshalJSON() ([]byte, error) {
 // Returns error if fails to parse the simulation spec of the pod.
 func NewPod(pod *v1.Pod, boundAt clock.Clock, status Status, node string) (*Pod, error) {
 	spec, err := parseSpec(pod)
+
 	if err != nil {
 		return nil, err
 	}
@@ -147,16 +148,23 @@ func (pod *Pod) ResourceUsage(clock clock.Clock) v1.ResourceList {
 	}
 
 	executedSeconds := int32(pod.executedDuration(clock).Seconds())
-	phaseDurationAcc := int32(0)
-	for _, phase := range pod.spec {
-		phaseDurationAcc += phase.seconds
-		if executedSeconds < phaseDurationAcc {
-			return phase.resourceUsage
-		}
+	shouldReturn := GetPodUsage(pod.spec, executedSeconds)
+	if shouldReturn != nil {
+		return shouldReturn
 	}
 
 	log.L.Panic("Unreachable code in pod.ResourceUsage()")
 	return v1.ResourceList{}
+}
+
+func GetPodUsage(spec []specPhase, executedSeconds int32) (v1.ResourceList) {
+	for _, phase := range spec {
+		phaseDurationAcc:= phase.seconds
+		if executedSeconds < phaseDurationAcc {
+			return phase.resourceUsage
+		}
+	}
+	return nil
 }
 
 // IsRunning returns whether this Pod is running at the given clock.

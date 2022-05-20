@@ -5,12 +5,26 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func TestPodSpecFromPodMemory(t *testing.T) {
 	podmem := PodMemory{Name: "w1", Records: []Record{{Time: time.Now(), Usage: 1e9}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e2}}}
 	podspec := CreatePod(podmem)
 	assert.Equal(t, "\n- seconds: 0.000000\n  resourceUsage:\n    cpu: 8\n    memory: 1000000000.000000\n\n- seconds: 120.000000\n  resourceUsage:\n    cpu: 8\n    memory: 100.000000\n", podspec.Annotations["simSpec"])
+}
+
+func TestGetJobSizeFromName(t *testing.T) {
+	sz, err := GetJobSizeFromName("o10n-worker-m-zx8wp-n5")
+	assert.NoError(t, err)
+	assert.Equal(t,"m",sz)
+}
+
+func TestAssignResourcesFromPodName(t *testing.T) {
+	podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: time.Now(), Usage: 1e9}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e2}}}
+	podspec := CreatePod(podmem)
+	assert.Equal(t,GetJobResources("m"),podspec.Spec.Containers[0].Resources)
 }
 
 func TestMigrationPod(t *testing.T) {
@@ -42,5 +56,38 @@ func TestFilterRecords(t *testing.T) {
 		assert.Equal(t,[]Record{{Time:checkTime,  Usage: 1e9}},FilterRecordsBefore(records,checkTime))
 	})
 }
+
+func TestSetPodResources(t *testing.T) {
+	t.Run("get S size", func(t *testing.T){
+		resourceS :=v1.ResourceList{
+		  "cpu":            resource.MustParse("5"),
+		  "memory":         resource.MustParse("30Gi"),
+		}
+		assert.Equal(t,resourceS,GetJobResourceRequest("s"))
+	})
+	t.Run("get M size", func(t *testing.T) {
+		resourceM :=v1.ResourceList{
+			"cpu":            resource.MustParse("8"),
+			"memory":         resource.MustParse("80Gi"),
+		      }
+		assert.Equal(t,resourceM,GetJobResourceRequest("m"))	
+	})
+	t.Run("get L size", func(t *testing.T) {
+		resource :=v1.ResourceList{
+			"cpu":            resource.MustParse("8"),
+			"memory":         resource.MustParse("130Gi"),
+		      }
+		assert.Equal(t,resource,GetJobResourceRequest("l"))	
+	})
+	t.Run("get XL size", func(t *testing.T) {
+		resource :=v1.ResourceList{
+			"cpu":            resource.MustParse("8"),
+			"memory":         resource.MustParse("420Gi"),
+		      }
+		assert.Equal(t,resource,GetJobResourceRequest("xl"))	
+	})
+
+
+    }
 
 

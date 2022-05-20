@@ -1,5 +1,5 @@
 ### https://raw.github.com/github/gitignore/f908e51bcf38ae5ede449c55189a7b25d8c507cc/Go.gitignore
-
+example/*.json
 .DS_Store
 # Binaries for programs and plugins
 *.exe

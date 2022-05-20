@@ -23,19 +23,20 @@ import (
 	"time"
 
 	"github.com/containerd/containerd/log"
-	"github.com/elchead/k8s-cluster-simulator/pkg/config"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
-
 	kubesim "github.com/elchead/k8s-cluster-simulator/pkg"
+	"github.com/elchead/k8s-cluster-simulator/pkg/config"
 	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
 	"github.com/elchead/k8s-cluster-simulator/pkg/migration"
 	"github.com/elchead/k8s-cluster-simulator/pkg/queue"
 	"github.com/elchead/k8s-cluster-simulator/pkg/scheduler"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
 )
+
+const useMigrator = false
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
@@ -69,23 +70,31 @@ var rootCmd = &cobra.Command{
 		endTime := startTime.Add(4 * time.Hour)
 		// fmt.Println("ENDTIME:", endTime)
 		// 2. Register one or more pod submitters to KubeSim.
-		file, err := os.Open("./test.csv")
+		file, err := os.Open("./pods.json")
 		if err != nil {
 			log.L.Fatal("Failed to read pod file:", err)
 		}
 
-		jobs := jobparser.ParsePodMemories(file)
+
+		jobs,err := jobparser.ParsePodMemoriesFromJson(file)
+		// job := jobparser.FindJob("o10n-worker-l-2xs2w-c7hh4",jobs)
+		// fmt.Println("MEM",job.Records[0].Usage)
+		// jobs = []jobparser.PodMemory{*job}
+		if err != nil {
+			log.L.Fatal("Failed to parse jobs", err)
+		}
 
 		submitter := jobparser.NewJobSubmitter(jobs)
 		sim.AddSubmitter("JobSubmitter", submitter)
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
 		
-
-		cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
-		requestPolicy := monitoring.NewThresholdPolicyWithCluster(40., cluster, metricClient)
-		migrationPolicy := monitoring.OptimalMigrator{Cluster: cluster, Client: metricClient}
-		migController := monitoring.NewController(requestPolicy, migrationPolicy)
-		sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTime(migController,jobs,endTime))
+		if useMigrator {
+			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
+			requestPolicy := monitoring.NewThresholdPolicyWithCluster(40., cluster, metricClient)
+			migrationPolicy := monitoring.OptimalMigrator{Cluster: cluster, Client: metricClient}
+			migController := monitoring.NewController(requestPolicy, migrationPolicy)
+			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTime(migController,jobs,endTime))
+		}
 		// 3. Run the main loop of KubeSim.
 		//    In each execution of the loop, KubeSim
 		//      1) stores pods submitted from the registered submitters to its queue,
