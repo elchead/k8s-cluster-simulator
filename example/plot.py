@@ -41,7 +41,7 @@ def get_zone_memory(data, name):
 
 fname = "../nomig.log"
 data = [json.loads(line) for line in open(fname, "r")]
-plt.title("no migration")
+plt.title("current job sizing model")
 plt.xlabel("Time")
 plt.ylabel("Memory [Gb]")
 # print(bytesto(202849602216, "g"), "\n", 202849602216 / d)

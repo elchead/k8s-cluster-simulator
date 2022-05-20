@@ -36,7 +36,7 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
 )
 
-const useMigrator = true
+const useMigrator = false
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
@@ -65,10 +65,8 @@ var rootCmd = &cobra.Command{
 		sim := kubesim.NewKubeSimFromConfigPathOrDie(configPath, queue, sched,metricClient)
 
 		conf, _ := kubesim.ReadConfig(configPath)
-		// fmt.Println("STARTTIME:", conf.StartClock)
 		startTime, _ := time.Parse(time.RFC3339, conf.StartClock)
 		endTime := startTime.Add(4 * time.Hour - 1*time.Minute)
-		// fmt.Println("ENDTIME:", endTime)
 		// 2. Register one or more pod submitters to KubeSim.
 		file, err := os.Open("./pods.json")
 		if err != nil {
@@ -87,8 +85,6 @@ var rootCmd = &cobra.Command{
 		podFactory := jobparser.PodFactory{SetResources: !useMigrator}
 		submitter := jobparser.NewJobSubmitterWithFactory(jobs,podFactory)
 		sim.AddSubmitter("JobSubmitter", submitter)
-		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
-		
 		if useMigrator {
 			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
 			requestPolicy := monitoring.NewThresholdPolicyWithCluster(45., cluster, metricClient)
@@ -96,6 +92,7 @@ var rootCmd = &cobra.Command{
 			migController := monitoring.NewController(requestPolicy, migrationPolicy)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory))
 		}
+		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
 		// 3. Run the main loop of KubeSim.
 		//    In each execution of the loop, KubeSim
 		//      1) stores pods submitted from the registered submitters to its queue,

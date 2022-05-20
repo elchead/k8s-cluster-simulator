@@ -25,9 +25,14 @@ func TestParseJson(t *testing.T) {
 // 	file, err := os.Open("../../example/pods.json")
 // 	assert.NoError(t, err)
 // 	jobs,err := jobparser.ParsePodMemoriesFromJson(file)
-// 	job := jobparser.FindJob("o10n-worker-l-2xs2w-c7hh4",jobs)
-// 	podspec := jobparser.CreatePod(*job)
-// 	assert.Equal(t,true,podspec.Annotations["simSpec"])
+// 	for _, job := range jobs {
+// 		// fmt.Println(job.Name,job.Records)
+// 		fmt.Println(job.StartAt,job.Name)
+// 	}
+// 	job := jobparser.FindJob("o10n-worker-s-hpppv-tgpz4",jobs)
+// 	// podspec := jobparser.CreatePod(*job)
+// 	assert.Equal(t,true,job.StartAt)
+// 	assert.Equal(t,true,job.EndAt)
 // }
 
 
