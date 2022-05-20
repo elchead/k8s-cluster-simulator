@@ -89,6 +89,7 @@ func (m *MigrationSubmitter) getEventsFromMigrations(currentTime clock.Clock) []
 		if jobTime.BeforeOrEqual(currentTime) {
 			log.L.Debug("pop from queue:", nextJob.Name)
 			pod := m.factory.New(nextJob)
+			nextJob.IsMigrating = false
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
 
 			oldPod := util.GetOldPodName(pod.Name)
@@ -110,6 +111,7 @@ func (m *MigrationSubmitter) startMigrations(migrations []migration.MigrationCmd
 			return fmt.Errorf("could not get job %s", jobName)
 		}
 		job.Name = jobName
+		job.IsMigrating = true
 
 		m.checker.StartMigration(currentTime)
 		jobparser.UpdateJobForMigration(job, m.checker.GetMigrationFinishTime().ToMetaV1().Time)

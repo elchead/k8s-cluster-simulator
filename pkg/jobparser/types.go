@@ -11,6 +11,7 @@ type PodMemory struct {
 	Records []Record
 	StartAt time.Time
 	EndAt time.Time
+	IsMigrating bool
 }
 
 type Record struct {

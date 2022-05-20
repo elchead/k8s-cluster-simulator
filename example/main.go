@@ -36,7 +36,7 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
 )
 
-const useMigrator = false
+const useMigrator = true
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
