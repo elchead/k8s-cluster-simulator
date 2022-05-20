@@ -27,10 +27,11 @@ import (
 type JobDeleter struct {
 	jobs    []PodMemory
 	endTime clock.Clock
+	deleted map[string]bool
 }
 
 func NewJobDeleterWithEndtime(jobs []PodMemory, endTime time.Time) *JobDeleter {
-	return &JobDeleter{jobs: jobs, endTime: clock.NewClock(endTime)}
+	return &JobDeleter{jobs: jobs, endTime: clock.NewClock(endTime),deleted: make(map[string]bool)}
 }
 
 func (s *JobDeleter) Submit(
@@ -38,9 +39,20 @@ func (s *JobDeleter) Submit(
 	_ algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error) {
 	events := make([]submitter.Event, 0, len(s.jobs))
+	for _, job := range s.jobs {
+		isDeleted := s.deleted[job.Name]
+		if !isDeleted && clock.NewClock(job.EndAt).BeforeOrEqual(currentTime) {
+			events = append(events, &submitter.DeleteEvent{PodNamespace: "default", PodName: job.Name})
+			s.deleted[job.Name] = true	
+		}
+	}
+
 	if s.endTime.BeforeOrEqual(currentTime) {
 		for _, pod := range s.jobs {
-			events = append(events, &submitter.DeleteEvent{PodNamespace: "default", PodName: pod.Name})
+			_,isDeleted := s.deleted[pod.Name]
+			if !isDeleted {
+				events = append(events, &submitter.DeleteEvent{PodNamespace: "default", PodName: pod.Name})
+			}
 		}
 		events = append(events, &submitter.TerminateSubmitterEvent{})
 	}
