@@ -10,6 +10,7 @@ type PodMemory struct {
 	Name    string
 	Records []Record
 	StartAt time.Time
+	EndAt time.Time
 }
 
 type Record struct {

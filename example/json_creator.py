@@ -29,6 +29,10 @@ with open("./example/pod_500_12:5-8-12.json", "r") as f:
         container = d["dimensions"][0]
         memory = d["values"]
         time = d["timestamps"]
+
+        # filter nil data
+        time = [t for idx, t in enumerate(time) if memory[idx] != None]
+        memory = [t for t in memory if t != None]
         try:
             podname = id_to_pod[container]
         except KeyError:

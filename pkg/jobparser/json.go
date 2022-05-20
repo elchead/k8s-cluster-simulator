@@ -56,6 +56,7 @@ func parseJobJson(job JobData) (PodMemory,error) {
 		t := job.Time[i] / 1e3
 		podMemory.Records[i].Time = time.Unix(t, 0)
 	}
-	err := SetStartTime(&podMemory)
-	return podMemory,err
+	podMemory.StartAt = podMemory.Records[0].Time
+	podMemory.EndAt = podMemory.Records[len(podMemory.Records)-1].Time
+	return podMemory,nil
 }
