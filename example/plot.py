@@ -3,17 +3,14 @@ import matplotlib.pyplot as plt
 
 # with open("./mig.log", "r") as f:
 
-fname = "../nomig.log"
-data = [json.loads(line) for line in open(fname, "r")]
-
-# print(data[0])
-z2_mem = []
-z3_mem = []
-
 
 def get_memory(t, node):
     z2 = t["Nodes"][node]["TotalResourceUsage"]["memory"]
-    z2 = int(z2)
+    try:
+        z2 = int(z2)
+    except:
+        if z2[-1] == "k":
+            z2 = int(z2[:-1]) * 8192
     return z2
 
 
@@ -31,24 +28,39 @@ def bytesto(bytes, to, bsize=1024):
     #     r = r / bsize
     d = 1 << 20
 
-    return bytes / d
+    return bytes / d / 1e3
 
 
-for t in data:
-    z2 = get_memory(t, "zone2")
-    # print(z2)
-    d = 1 << 20
+def get_zone_memory(data, name):
+    z_mem = []
+    for t in data:
+        z2 = get_memory(t, name)
+        z_mem.append(bytesto(z2, "g"))
+    return z_mem
 
-    # print("CONV", z2 / d)
-    # print(z2)
-    z2_mem.append(bytesto(z2, "g"))
-    z3 = get_memory(t, "zone3")
-    z3_mem.append(bytesto(z3, "g"))
 
 # d = 1 << 20
+fname = "../nomig.log"
+data = [json.loads(line) for line in open(fname, "r")]
+plt.title("no migration")
+plt.xlabel("Time")
+plt.ylabel("Memory [Gb]")
 # print(bytesto(202849602216, "g"), "\n", 202849602216 / d)
-plt.plot(z2_mem)
-plt.plot(z3_mem)
+plt.plot(get_zone_memory(data, "zone2"))
+plt.plot(get_zone_memory(data, "zone3"))
+plt.plot(get_zone_memory(data, "zone4"))
+plt.plot(get_zone_memory(data, "zone5"))
+
+plt.figure()
+plt.title("with migration")
+plt.xlabel("Time")
+plt.ylabel("Memory [Gb]")
+fname = "../migN.log"
+data = [json.loads(line) for line in open(fname, "r")]
+plt.plot(get_zone_memory(data, "zone2"))
+plt.plot(get_zone_memory(data, "zone3"))
+plt.plot(get_zone_memory(data, "zone4"))
+plt.plot(get_zone_memory(data, "zone5"))
 plt.show()
 # print("Hi")
 
