@@ -9,9 +9,18 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+func TestPodFactory(t *testing.T) {
+	sut := PodFactory{SetResources: false}
+
+	podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: time.Now(), Usage: 1e9}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e2}}}
+	podspec := sut.New(podmem)
+	assert.Empty(t,podspec.Spec.Containers)
+}
+
 func TestPodSpecFromPodMemory(t *testing.T) {
-	podmem := PodMemory{Name: "w1", Records: []Record{{Time: time.Now(), Usage: 1e9}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e2}}}
-	podspec := CreatePod(podmem)
+	now := time.Now()
+	podmem := PodMemory{Name: "w1", Records: []Record{{Time: now, Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 1e2}}}
+	podspec := CreatePodWithoutResources(podmem)
 	assert.Equal(t, "\n- seconds: 0.000000\n  resourceUsage:\n    cpu: 8\n    memory: 1000000000.000000\n\n- seconds: 120.000000\n  resourceUsage:\n    cpu: 8\n    memory: 100.000000\n", podspec.Annotations["simSpec"])
 }
 

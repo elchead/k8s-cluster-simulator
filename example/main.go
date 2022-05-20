@@ -84,16 +84,17 @@ var rootCmd = &cobra.Command{
 			log.L.Fatal("Failed to parse jobs", err)
 		}
 
-		submitter := jobparser.NewJobSubmitter(jobs)
+		podFactory := jobparser.PodFactory{SetResources: !useMigrator}
+		submitter := jobparser.NewJobSubmitterWithFactory(jobs,podFactory)
 		sim.AddSubmitter("JobSubmitter", submitter)
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
 		
 		if useMigrator {
 			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
-			requestPolicy := monitoring.NewThresholdPolicyWithCluster(40., cluster, metricClient)
+			requestPolicy := monitoring.NewThresholdPolicyWithCluster(25., cluster, metricClient)
 			migrationPolicy := monitoring.OptimalMigrator{Cluster: cluster, Client: metricClient}
 			migController := monitoring.NewController(requestPolicy, migrationPolicy)
-			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTime(migController,jobs,endTime))
+			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory))
 		}
 		// 3. Run the main loop of KubeSim.
 		//    In each execution of the loop, KubeSim

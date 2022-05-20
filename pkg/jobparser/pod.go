@@ -16,6 +16,18 @@ type Time interface {
 	After(u Time) bool
 }
 
+type PodFactory struct {
+	SetResources bool
+}
+
+func (f PodFactory)  New(podinfo PodMemory) *v1.Pod {
+	if f.SetResources {
+		return CreatePod(podinfo)
+	} else {
+		return CreatePodWithoutResources(podinfo)
+	}
+}
+
 func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
 	res := make([]Record,0)
 	var beforeIdx int
@@ -50,7 +62,7 @@ func UpdateJobForMigration(podinfo *PodMemory, migration time.Time) {
 
 func MigratePod(job PodMemory,migration time.Time) *v1.Pod {
 	UpdateJobForMigration(&job,migration)
-	return CreatePod(job)
+	return CreatePodWithoutResources(job)
 }
 
 func GetJobSizeFromName(name string) (string, error) {
@@ -62,12 +74,7 @@ func GetJobSizeFromName(name string) (string, error) {
 	}
 }
 
-func CreatePod(podinfo PodMemory) *v1.Pod {
-	size,err := GetJobSizeFromName(podinfo.Name)
-	if err != nil {
-		log.L.Info("Setting job size to s since:",err)
-		size = "s"
-	}
+func CreatePodWithoutResources(podinfo PodMemory) *v1.Pod {
 	simSpec := ""
 	cpu := "8" // s: 5-10; m: 8-10; l:8-10
 	startTime := podinfo.Records[0].Time
@@ -80,7 +87,7 @@ func CreatePod(podinfo PodMemory) *v1.Pod {
     memory: %f
 `, time, cpu, record.Usage)
 	}
-	pod := v1.Pod{
+	return &v1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Pod",
@@ -92,18 +99,26 @@ func CreatePod(podinfo PodMemory) *v1.Pod {
 				"simSpec": simSpec,
 			},
 		},
-		Spec: v1.PodSpec{
-			Containers: []v1.Container{
-				{
-					Name:  "worker",
-					Image: "worker-image",
-					Resources: GetJobResources(size),
-				},
+	}
+}
+
+func CreatePod(podinfo PodMemory) *v1.Pod {
+	size,err := GetJobSizeFromName(podinfo.Name)
+	if err != nil {
+		log.L.Info("Setting job size to s since:",err)
+		size = "s"
+	}
+	pod := CreatePodWithoutResources(podinfo)
+	pod.Spec = v1.PodSpec{
+		Containers: []v1.Container{
+			{
+				Name:  "worker",
+				Image: "worker-image",
+				Resources: GetJobResources(size),
 			},
 		},
 	}
-
-	return &pod
+	return pod
 }
 
 func GetJobResourceRequest(size string) v1.ResourceList {

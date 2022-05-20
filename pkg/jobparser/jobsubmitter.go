@@ -68,10 +68,15 @@ type JobSubmitter struct {
 	jobs       []PodMemory
 	currentIdx int
 	iterator   *Iterator
+	factory PodFactory
 }
 
 func NewJobSubmitter(jobs []PodMemory) *JobSubmitter {
-	return &JobSubmitter{jobs: jobs, currentIdx: 0, iterator: NewIterator(jobs)}
+	return &JobSubmitter{jobs: jobs, currentIdx: 0, iterator: NewIterator(jobs),factory: PodFactory{SetResources: true}}
+}
+
+func NewJobSubmitterWithFactory(jobs []PodMemory,podfactory PodFactory) *JobSubmitter {
+	return &JobSubmitter{jobs: jobs, currentIdx: 0, iterator: NewIterator(jobs),factory: podfactory}
 }
 
 func NewJobSubmitterFromFile(podMemCsvFile io.Reader) *JobSubmitter {
@@ -94,7 +99,7 @@ func (s *JobSubmitter) Submit(
 		nextJob := s.iterator.Value()
 		jobTime := clock.NewClock(nextJob.StartAt)
 		if jobTime.BeforeOrEqual(currentTime) {
-			pod := CreatePod(nextJob)
+			pod := s.factory.New(nextJob)
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
 			s.iterator.Next()
 		} else {

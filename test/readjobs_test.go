@@ -13,7 +13,7 @@ func TestCreatePodsFromJobCSV(t *testing.T) {
 	assert.NoError(t, err)
 	podmems := jobparser.ParsePodMemories(f)
 	for _, pod := range podmems {
-		spec := jobparser.CreatePod(pod)
+		spec := jobparser.CreatePodWithoutResources(pod)
 		assert.NotEmpty(t, spec.ObjectMeta.Name)
 
 	}

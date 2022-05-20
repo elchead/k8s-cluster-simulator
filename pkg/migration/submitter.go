@@ -42,6 +42,7 @@ type MigrationSubmitter struct {
 	queue jobparser.Iterator
 	endTime clock.Clock
 	checker MigrationChecker
+	factory jobparser.PodFactory
 }
 
 func (m *MigrationSubmitter) Submit(
@@ -75,7 +76,7 @@ func (m *MigrationSubmitter) getEventsFromMigrations(currentTime clock.Clock) []
 		jobTime := clock.NewClock(nextJob.StartAt)
 		if jobTime.BeforeOrEqual(currentTime) {
 			log.L.Debug("pop from queue:", nextJob.Name)
-			pod := jobparser.CreatePod(nextJob)
+			pod := m.factory.New(nextJob)
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
 
 			oldPod := util.GetOldPodName(pod.Name)
@@ -116,5 +117,9 @@ func NewSubmitterWithJobs(controller ControllerI,jobs []jobparser.PodMemory) *Mi
 
 func NewSubmitterWithJobsWithEndTime(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time) *MigrationSubmitter {
 	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime)}
+}
+
+func NewSubmitterWithJobsWithEndTimeFactory(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time,factory jobparser.PodFactory) *MigrationSubmitter {
+	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime),factory: factory}
 }
 
