@@ -20,6 +20,7 @@ import (
 	"github.com/elchead/k8s-cluster-simulator/pkg/node"
 	"github.com/elchead/k8s-cluster-simulator/pkg/pod"
 	"github.com/elchead/k8s-cluster-simulator/pkg/queue"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // HumanReadableFormatter is a Foramtter that formats metrics in a human-readable style.
@@ -92,8 +93,8 @@ func (h *HumanReadableFormatter) formatNodesMetrics(metrics map[string]node.Metr
 			req := met.TotalResourceRequest[rsrc]
 
 			if rsrc == "memory" {
-				d := int64(1 << 20)
-				str += fmt.Sprintf(", memMB %d/%d/%d", usage.Value()/d, req.Value()/d, alloc.Value()/d)
+				// d := int64(1 << 20)
+				str += fmt.Sprintf(", memMB (usage,req,alloc) %d/%d/%d", usage.ScaledValue(resource.Mega), req.ScaledValue(resource.Mega), alloc.ScaledValue(resource.Mega))
 			} else {
 				str += fmt.Sprintf(", %s %d/%d/%d", rsrc, usage.Value(), req.Value(), alloc.Value())
 			}
