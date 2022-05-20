@@ -36,7 +36,7 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
 )
 
-const useMigrator = false
+const useMigrator = true
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
@@ -67,7 +67,7 @@ var rootCmd = &cobra.Command{
 		conf, _ := kubesim.ReadConfig(configPath)
 		// fmt.Println("STARTTIME:", conf.StartClock)
 		startTime, _ := time.Parse(time.RFC3339, conf.StartClock)
-		endTime := startTime.Add(4 * time.Hour)
+		endTime := startTime.Add(4 * time.Hour - 1*time.Minute)
 		// fmt.Println("ENDTIME:", endTime)
 		// 2. Register one or more pod submitters to KubeSim.
 		file, err := os.Open("./pods.json")
@@ -91,7 +91,7 @@ var rootCmd = &cobra.Command{
 		
 		if useMigrator {
 			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
-			requestPolicy := monitoring.NewThresholdPolicyWithCluster(25., cluster, metricClient)
+			requestPolicy := monitoring.NewThresholdPolicyWithCluster(45., cluster, metricClient)
 			migrationPolicy := monitoring.OptimalMigrator{Cluster: cluster, Client: metricClient}
 			migController := monitoring.NewController(requestPolicy, migrationPolicy)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory))
