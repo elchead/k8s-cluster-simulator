@@ -37,11 +37,13 @@ func ParsePodMemoriesFromJson(reader io.Reader) ([]PodMemory, error) {
 	
 	pods := make([]PodMemory, 0,len(jobs))
 	for _, job := range jobs {
-		pod, err := parseJobJson(job)
-		if err != nil {
-			log.Println("Removing pod because:", err)
+		if len(job.Memory) > 2 { // prevent that job starts and ends at the same time
+			pod, err := parseJobJson(job)
+			if err != nil {
+				log.Println("Removing pod because:", err)
+			}
+			pods = append(pods,pod)
 		}
-		pods = append(pods,pod)
 	}
 	SortPodMemoriesByTime(pods)
 	return pods, nil
