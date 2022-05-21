@@ -62,18 +62,25 @@ var rootCmd = &cobra.Command{
 		queue := queue.NewPriorityQueue()
 		sched := buildScheduler() // see below
 		metricClient := migration.NewClient()
-		sim := kubesim.NewKubeSimFromConfigPathOrDie(configPath, queue, sched,metricClient)
 
-		conf, _ := kubesim.ReadConfig(configPath)
+		conf, err := kubesim.ReadConfig(configPath)
+		if useMigrator {
+			for i, logger := range conf.MetricsLogger {
+				conf.MetricsLogger[i].Dest = "m-" + logger.Dest
+			}
+		}
+		if err != nil {
+			log.L.Fatal("Failed to read config:", err)
+		}
+		sim,_ := kubesim.NewKubeSim(conf, queue, sched,metricClient)
 		startTime, _ := time.Parse(time.RFC3339, conf.StartClock)
 		endTime := startTime.Add(4 * time.Hour - 1*time.Minute)
-		// 2. Register one or more pod submitters to KubeSim.
+
+		
 		file, err := os.Open("./pods.json")
 		if err != nil {
 			log.L.Fatal("Failed to read pod file:", err)
 		}
-
-
 		jobs,err := jobparser.ParsePodMemoriesFromJson(file)
 		// job := jobparser.FindJob("o10n-worker-l-2xs2w-c7hh4",jobs)
 		// fmt.Println("MEM",job.Records[0].Usage)

@@ -105,34 +105,6 @@ func NewKubeSim(
 	}, nil
 }
 
-// NewKubeSimFromConfigPath creates a new KubeSim with config from confPath (excluding file
-// extension), queue, and scheduler.
-// Returns error if the configuration failed.
-func NewKubeSimFromConfigPath(
-	confPath string, queue queue.PodQueue, sched scheduler.Scheduler,client *migration.Client) (*KubeSim, error) {
-
-	conf, err := ReadConfig(confPath)
-	if err != nil {
-		return nil, errors.Errorf("Error reading config: %s", err.Error())
-	}
-
-	return NewKubeSim(conf, queue, sched,client)
-}
-
-// NewKubeSimFromConfigPathOrDie creates a new KubeSim with config from confPath (excluding file
-// extension), queue, and scheduler.
-// If an error occurs during the initialization, it panics and stops the execution.
-func NewKubeSimFromConfigPathOrDie(
-	confPath string, queue queue.PodQueue, sched scheduler.Scheduler,client *migration.Client) *KubeSim {
-
-	kubesim, err := NewKubeSimFromConfigPath(confPath, queue, sched,client)
-	if err != nil {
-		log.L.Fatal("Config failed: ", err)
-	}
-
-	return kubesim
-}
-
 // AddSubmitter adds the new submitter to this KubeSim.
 func (k *KubeSim) AddSubmitter(name string, submitter submitter.Submitter) {
 	k.submitters[name] = submitter
