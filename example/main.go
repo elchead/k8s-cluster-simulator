@@ -35,9 +35,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
 )
-
-const useMigrator = true
-
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		log.L.WithError(err).Fatal("Error executing root command")
@@ -46,10 +43,13 @@ func main() {
 
 // configPath is the path of the config file, defaulting to "config".
 var configPath string
+var useMigrator bool
+var nodeFreeThreshold float64
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(
-		&configPath, "config", "config", "config file (excluding file extension)")
+	rootCmd.PersistentFlags().StringVar(&configPath, "config", "config", "config file (excluding file extension)")
+	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
+	rootCmd.PersistentFlags().Float64Var(&nodeFreeThreshold, "threshold", 45., "node free threshold in % (default 45.)")
 }
 
 var rootCmd = &cobra.Command{
@@ -87,7 +87,7 @@ var rootCmd = &cobra.Command{
 		sim.AddSubmitter("JobSubmitter", submitter)
 		if useMigrator {
 			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
-			requestPolicy := monitoring.NewThresholdPolicyWithCluster(45., cluster, metricClient)
+			requestPolicy := monitoring.NewThresholdPolicyWithCluster(nodeFreeThreshold, cluster, metricClient)
 			migrationPolicy := monitoring.OptimalMigrator{Cluster: cluster, Client: metricClient}
 			migController := monitoring.NewController(requestPolicy, migrationPolicy)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory))
