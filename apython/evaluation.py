@@ -10,6 +10,8 @@ class PodData:
         self.memory = []
         self.time = []
         self.migration_idx = []
+        self.checkpointed = False
+        self.restored = False
 
     memory: "List[float]"
     time: "List[float]"
@@ -20,10 +22,12 @@ class Job:
     nodes: "dict[str,PodData]"
     name: str
     nbr_migrations: int
+    migration_order: "List[str]"
 
     def __init__(self):
         self.nodes = defaultdict(PodData)
         self.nbr_migrations = 0
+        self.migration_order = ["", "", "", ""]
 
 
 def bytesto(bytes):
@@ -142,12 +146,21 @@ def merge_jobs(jobs):
     for jobname, nodes in jobs.items():
         if jobname.startswith("m"):
             count = count_m(jobname)
+
+            # add migration index to pod with less m
+            for node, nodedata in nodes.items():
+                if nodedata.memory:
+                    old_node = list(jobs[jobname[1:]].keys())[0]
+                    new_jobs[jobname[count:]].nodes[old_node].restored = True
+                new_jobs[jobname[count:]].migration_order[count] = node
+
+            jobname = jobname[count:]
             if count > new_jobs[jobname].nbr_migrations:
                 new_jobs[jobname].nbr_migrations = count
-            jobname = jobname[count:]
 
         for node, nodedata in nodes.items():
-            new_jobs[jobname].nodes[node].migration_idx.append(len(nodedata.memory) - 1)
+            if not jobname.startswith("m"):
+                new_jobs[jobname].migration_order[0] = node
             new_jobs[jobname].nodes[node].memory = nodedata.memory  # check if restarted on same node
             new_jobs[jobname].nodes[node].time = nodedata.time
     return new_jobs
