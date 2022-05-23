@@ -6,9 +6,9 @@ from typing import List
 
 
 class PodData:
-    def __init__(self, memory=[], time=[]):
-        self.memory = memory
-        self.time = time
+    def __init__(self):
+        self.memory = []
+        self.time = []
         self.migration_idx = []
 
     memory: "List[float]"
@@ -19,6 +19,11 @@ class PodData:
 class Job:
     nodes: "dict[str,PodData]"
     name: str
+    nbr_migrations: int
+
+    def __init__(self):
+        self.nodes = defaultdict(PodData)
+        self.nbr_migrations = 0
 
 
 def bytesto(bytes):
@@ -70,6 +75,12 @@ def get_pod_usage_on_node(node, data):
 # USE
 def get_pod_usage_on_nodes(data):
     pods = defaultdict(lambda: defaultdict(PodData))  # [job][node]
+    # for d in data:
+    #     for k, v in get_pods(d).items():
+    #         job = k.split("/")[1]
+    #         node = v["Node"]
+    #         pods[job] = {node: PodData()}
+
     for d in data:
         for k, v in get_pods(d).items():
             job = k.split("/")[1]
@@ -127,17 +138,18 @@ def find_migration_points_and_merge_pods(pod_memories):
 
 def merge_jobs(jobs):
     # check and count prepended m's
-    new_jobs = defaultdict(lambda: defaultdict(PodData))  # [job][node]
-    nbr_migrations = len(jobs.keys()) - 1
+    new_jobs = defaultdict(Job)  # [job][node]
     for jobname, nodes in jobs.items():
         if jobname.startswith("m"):
             count = count_m(jobname)
+            if count > new_jobs[jobname].nbr_migrations:
+                new_jobs[jobname].nbr_migrations = count
             jobname = jobname[count:]
 
         for node, nodedata in nodes.items():
-            new_jobs[jobname][node].migration_idx.append(len(nodedata.memory) - 1)
-            new_jobs[jobname][node].memory = nodedata.memory  # check if restarted on same node
-            new_jobs[jobname][node].time = nodedata.time
+            new_jobs[jobname].nodes[node].migration_idx.append(len(nodedata.memory) - 1)
+            new_jobs[jobname].nodes[node].memory = nodedata.memory  # check if restarted on same node
+            new_jobs[jobname].nodes[node].time = nodedata.time
     return new_jobs
 
 

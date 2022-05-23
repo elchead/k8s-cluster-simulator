@@ -16,11 +16,12 @@ def test_get_job():
         "mmo10wo": {"zone4": PodData([7, 8, 9], [10, 20, 30])},
     }
     j = merge_jobs(raw_pod_mem)
-    assert j["o10wo"]["zone2"].memory == [1, 2, 3]
-    assert j["o10wo"]["zone2"].time == [10, 20, 30]
-    assert j["o10wo"]["zone3"].memory == [4, 5, 6]
-    assert j["o10wo"]["zone3"].time == [10, 20, 30]
-    assert j["o10wo"]["zone4"].memory == [7, 8, 9]
+    assert j["o10wo"].nodes["zone2"].memory == [1, 2, 3]
+    assert j["o10wo"].nodes["zone2"].time == [10, 20, 30]
+    assert j["o10wo"].nodes["zone3"].memory == [4, 5, 6]
+    assert j["o10wo"].nodes["zone3"].time == [10, 20, 30]
+    assert j["o10wo"].nodes["zone4"].memory == [7, 8, 9]
+    assert j["o10wo"].nbr_migrations == 2
 
 
 def test_get_pod_usage_on_nodes():
@@ -28,5 +29,5 @@ def test_get_pod_usage_on_nodes():
     data = [json.loads(line) for line in open(fname, "r")]
     assert [0.033884765625, 0.033025390625, 0.03300390625, 0.03903125, 0.03903125] == get_pod_usage_on_nodes(data)[
         "o10n-worker-l-4g2hn-b6lvf"
-    ]["zone5"].memory
-    assert [10, 80, 150, 220, 290] == get_pod_usage_on_nodes(data)["o10n-worker-l-4g2hn-b6lvf"]["zone5"].time
+    ].nodes["zone5"].memory
+    assert [10, 80, 150, 220, 290] == get_pod_usage_on_nodes(data)["o10n-worker-l-4g2hn-b6lvf"].nodes["zone5"].time
