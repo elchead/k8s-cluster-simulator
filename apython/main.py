@@ -7,6 +7,7 @@ fname = "/Users/I545428/gh/controller-simulator/m-mig.log"
 data = [json.loads(line) for line in open(fname, "r")]
 rawjobs = get_pod_usage_on_nodes(data)
 jobs = merge_jobs(rawjobs)
+jobs = adjust_time_stamps(jobs)
 
 
 plots = {}
@@ -18,9 +19,24 @@ for z in zones:
 
 
 for jobname, job in jobs.items():
-    for zone, poddata in job.nodes.items():
-        if zone in zones:
-            axis[zone].plot(poddata.memory, markevery=poddata.migration_idx, label=jobname)
+    for zone, poddata in job.get_pod_runs():
+        axis[zone].plot(poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x")
+
+
+# for idx, poddata in enumerate(job.node_data):
+#     if poddata:
+#         zone = job.node_order[idx]
+#         axis[zone].plot(poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x")
+
+# for zone, poddata in job.nodes.items():
+#     if zone in zones:
+#         if job.node_order[1:] != ["", "", ""]:
+#             print("Migration order", jobname, job.node_order)
+#         if poddata.restored:
+#             poddata.migration_idx = [0]
+#         # if job.nbr_migrations != 0:
+#         #     print("NBR", jobname, job.nbr_migrations)
+#         axis[zone].plot(poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x")
 
 # for zone in zones:
 #     plt.figure()
@@ -33,10 +49,11 @@ for jobname, job in jobs.items():
 #     print(migration_idxs)
 #     for pod, v in new_mems.items():
 #         print(pod)
-#         plt.plot(v, label=pod, markevery=migration_idxs[pod], marker="x")
+#         plt.plot(v, label=pod)
 
 for z in zones:
     axis[z].legend()
+
 plt.xlabel("Time")
 plt.ylabel("Memory [Gb]")
 plt.show()
