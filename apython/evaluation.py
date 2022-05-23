@@ -1,8 +1,24 @@
 import json
 from collections import defaultdict
-import matplotlib.pyplot as plt
+from dataclasses import dataclass
+from re import S
+from typing import List
 
-fname = "/Users/I545428/gh/controller-simulator/m-mig.log"
+
+class PodData:
+    def __init__(self, memory=[], time=[]):
+        self.memory = memory
+        self.time = time
+        self.migration_idx = []
+
+    memory: "List[float]"
+    time: "List[float]"
+    migration_idx: "List[int]"
+
+
+class Job:
+    nodes: "dict[str,PodData]"
+    name: str
 
 
 def bytesto(bytes):
@@ -51,20 +67,86 @@ def get_pod_usage_on_node(node, data):
     return pods
 
 
-zones = ["zone2", "zone3", "zone4", "zone5"]
+# USE
+def get_pod_usage_on_nodes(data):
+    pods = defaultdict(lambda: defaultdict(PodData))  # [job][node]
+    for d in data:
+        for k, v in get_pods(d).items():
+            job = k.split("/")[1]
+            node = v["Node"]
+            if "memory" not in v["ResourceUsage"]:  # last entry is empty (0)
+                # pods[job][node].memory.append(0)
+                continue
+            pods[job][node].memory.append(bytesto(v["ResourceUsage"]["memory"]))
+            pods[job][node].time.append(v["ExecutedSeconds"])
+
+    return pods
 
 
-data = [json.loads(line) for line in open(fname, "r")]
-for zone in zones:
-    plt.figure()
-    plt.title(zone)
-    plt.xlabel("Time")
-    plt.ylabel("Memory [Gb]")
-    plt.legend()
-    mems = get_pod_usage_on_node(zone, data)
-    print()
-    for pod, v in mems.items():
-        plt.plot(v, label=pod)
+def get_all_jobs(datatimestamp):
+    jobs = defaultdict(Job)
+    for d in datatimestamp:
+        for rawname, poddata in get_pods(d).items():
+            name = rawname.split("/")[1]
+            if "memory" not in poddata["ResourceUsage"]:
+                # last entry is empty (0)
+                jobs[name].append(0)
+                continue
+            node = poddata["Node"]
+            jobs[name].nodes[node]
+            # jobs[name].append(bytesto(v["ResourceUsage"]["memory"]))
+            jobs[name].memory.append(bytesto(poddata["ResourceUsage"]["memory"]))
+            # jobs[name].name = name
+            # jobs[name].nodes[node].
+    return jobs
 
-plt.show()
+
+def find_migration_points_and_merge_pods(pod_memories):
+    pod_migration_idxs = defaultdict(list)
+    # check and count prepended m's
+    new_pod_memories = defaultdict(list)
+    for pod, v in pod_memories.items():
+        if pod.startswith("m"):
+            count = 0
+            for i, l in enumerate(pod):
+                if l == "m":
+                    count += 1
+                else:
+                    break
+            originalpod = pod[count:]
+            if originalpod in pod_memories:
+                pod_migration_idxs[originalpod].append(len(pod_memories[originalpod]) - 1)
+            else:
+                print(pod, "original", originalpod, "not found")
+            # print("extend", pod_memories[originalpod])
+            new_pod_memories[originalpod].extend(v)
+
+    # new_pod_memories = {k: v for k, v in pod_memories.items() if not k.startswith("m")}
+    return new_pod_memories, pod_migration_idxs
+
+
+def merge_jobs(jobs):
+    # check and count prepended m's
+    new_jobs = defaultdict(lambda: defaultdict(PodData))  # [job][node]
+    nbr_migrations = len(jobs.keys()) - 1
+    for jobname, nodes in jobs.items():
+        if jobname.startswith("m"):
+            count = count_m(jobname)
+            jobname = jobname[count:]
+
+        for node, nodedata in nodes.items():
+            new_jobs[jobname][node].migration_idx.append(len(nodedata.memory) - 1)
+            new_jobs[jobname][node].memory = nodedata.memory  # check if restarted on same node
+            new_jobs[jobname][node].time = nodedata.time
+    return new_jobs
+
+
+def count_m(job):
+    count = 0
+    for i, l in enumerate(job):
+        if l == "m":
+            count += 1
+        else:
+            break
+    return count
 
