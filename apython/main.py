@@ -1,4 +1,4 @@
-from evaluation import *
+from parsing import *
 import matplotlib.pyplot as plt
 
 zones = ["zone2", "zone3", "zone4", "zone5"]
@@ -7,7 +7,7 @@ fname = "/Users/I545428/gh/controller-simulator/m-mig.log"
 data = [json.loads(line) for line in open(fname, "r")]
 rawjobs = get_pod_usage_on_nodes(data)
 jobs = merge_jobs(rawjobs)
-jobs = adjust_time_stamps(jobs)
+# jobs = adjust_time_stamps(jobs)
 
 
 plots = {}
@@ -19,7 +19,7 @@ for z in zones:
 
 
 for jobname, job in jobs.items():
-    for zone, poddata in job.get_pod_runs():
+    for zone, poddata in job.get_pod_runs_for_plot():
         axis[zone].plot(poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x")
 
 

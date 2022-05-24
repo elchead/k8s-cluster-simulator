@@ -1,6 +1,6 @@
 import json
 import matplotlib.pyplot as plt
-from evaluation import *
+from parsing import *
 
 # with open("./mig.log", "r") as f:
 

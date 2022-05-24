@@ -4,8 +4,59 @@ from dataclasses import dataclass
 from re import S
 from typing import List
 import numpy as np
+import copy
 
 maxRestarts = 10
+
+
+class PodData:
+    @classmethod
+    def withdata(cls, time, memory):
+        p = cls()
+        p.memory = memory
+        p.time = time
+        return p
+
+    def __init__(self):
+        self.memory = []
+        self.time = []
+        self.migration_idx = []
+        self.checkpointed = False
+        self.restored = False
+
+    def get_execution_time(self):
+        return self.time[-1]
+
+
+class Job:
+    nodes: "dict[str,PodData]"
+    name: str
+    nbr_migrations: int
+    node_order: "List[str]"
+    node_data: "List[PodData]"
+
+    def __init__(self):
+        self.nodes = defaultdict(PodData)
+        self.nbr_migrations = 0
+        self.node_order = [""] * maxRestarts
+        self.node_data = [None] * maxRestarts  # PodData
+
+    def add_pod(self, podname, node, nodedata: PodData):
+        count = count_m(podname)
+        self.node_order[count] = node
+        self.node_data[count] = PodData.withdata(nodedata.time, nodedata.memory)
+
+    def get_pod_runs_for_plot(self):
+        data = [e for e in get_shifted_timestamps(self.node_data) if e]
+        zones = [e for e in self.node_order if e != ""]
+        return zip(zones, data)
+
+    def get_execution_time(self):
+        total = 0
+        for poddata in self.node_data:
+            if poddata:
+                total += poddata.get_execution_time()
+        return total
 
 
 def get_memory(t, node):
@@ -41,44 +92,6 @@ def get_zone_memory(data, name):
         z2 = get_memory(t, name)
         z_mem.append(bytestoOld(z2))
     return z_mem
-
-
-def PodDataWith(time, memory):
-    p = PodData()
-    p.memory = memory
-    p.time = time
-    return p
-
-
-class PodData:
-    def __init__(self):
-        self.memory = []
-        self.time = []
-        self.migration_idx = []
-        self.checkpointed = False
-        self.restored = False
-
-    memory: "List[float]"
-    time: "List[float]"
-    migration_idx: "List[int]"
-
-
-class Job:
-    nodes: "dict[str,PodData]"
-    name: str
-    nbr_migrations: int
-    node_order: "List[str]"
-
-    def __init__(self):
-        self.nodes = defaultdict(PodData)
-        self.nbr_migrations = 0
-        self.node_order = [""] * maxRestarts
-        self.node_data = [None] * maxRestarts
-
-    def get_pod_runs(self):
-        data = [e for e in self.node_data if e]
-        zones = [e for e in self.node_order if e != ""]
-        return zip(zones, data)
 
 
 def bytesto(bytes):
@@ -130,12 +143,6 @@ def get_pod_usage_on_node(node, data):
 # USE
 def get_pod_usage_on_nodes(data):
     pods = defaultdict(lambda: defaultdict(PodData))  # [job][node]
-    # for d in data:
-    #     for k, v in get_pods(d).items():
-    #         job = k.split("/")[1]
-    #         node = v["Node"]
-    #         pods[job] = {node: PodData()}
-
     for d in data:
         for k, v in get_pods(d).items():
             job = k.split("/")[1]
@@ -145,7 +152,6 @@ def get_pod_usage_on_nodes(data):
                 continue
             pods[job][node].memory.append(bytesto(v["ResourceUsage"]["memory"]))
             pods[job][node].time.append(v["ExecutedSeconds"])
-
     return pods
 
 
@@ -191,10 +197,10 @@ def find_migration_points_and_merge_pods(pod_memories):
     return new_pod_memories, pod_migration_idxs
 
 
-def merge_jobs(jobs):
+def merge_jobs(job_node_dict):
     # check and count prepended m's
     new_jobs = defaultdict(Job)  # [job][node]
-    for jobname, nodes in jobs.items():
+    for jobname, nodes in job_node_dict.items():
         count = 0
         if jobname.startswith("m"):
             count = count_m(jobname)
@@ -202,7 +208,7 @@ def merge_jobs(jobs):
             # add migration index to pod with less m
             for node, nodedata in nodes.items():
                 if nodedata.memory:
-                    old_node = list(jobs[jobname[1:]].keys())[0]
+                    old_node = list(job_node_dict[jobname[1:]].keys())[0]
                     new_jobs[jobname[count:]].nodes[old_node].restored = True
                 new_jobs[jobname[count:]].node_order[count] = node
 
@@ -216,24 +222,36 @@ def merge_jobs(jobs):
             new_jobs[jobname].nodes[node].memory = nodedata.memory  # check if restarted on same node
             new_jobs[jobname].nodes[node].time = nodedata.time
 
-            new_jobs[jobname].node_data[count] = PodDataWith(
+            new_jobs[jobname].node_data[count] = PodData.withdata(
                 nodedata.time, nodedata.memory
             )  # check if restarted on same node
 
     return new_jobs
 
 
-def adjust_time_stamps(jobs: "dict[str,Job]"):
-    for jobname, job in jobs.items():
-        for idx, data in enumerate(job.node_data[1:]):
-            if data:
-                last_time = jobs[jobname].node_data[idx].time[-1]
-                new_time = np.array(data.time) + last_time
-                data.time = new_time
-                if data.time[0] != 0:
-                    data.migration_idx = [0]
+# def adjust_time_stamps(jobs: "dict[str,Job]"):
+#     for jobname, job in jobs.items():
+#         for idx, data in enumerate(job.node_data[1:]):
+#             if data:
+#                 last_time = jobs[jobname].node_data[idx].time[-1]
+#                 new_time = np.array(data.time) + last_time
+#                 data.time = new_time
+#                 if data.time[0] != 0:
+#                     data.migration_idx = [0]
 
-    return jobs
+#     return jobs
+
+
+def get_shifted_timestamps(p: "List[PodData]"):
+    cp = copy.deepcopy(p)
+    for prior_idx, data in enumerate(cp[1:]):
+        if data:
+            last_time = cp[prior_idx].time[-1]
+            new_time = np.array(data.time) + last_time
+            data.time = new_time
+            if data.time[0] != 0:
+                data.migration_idx = [0]
+    return cp
 
 
 def count_m(job):
@@ -244,4 +262,3 @@ def count_m(job):
         else:
             break
     return count
-
