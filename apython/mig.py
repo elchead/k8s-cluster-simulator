@@ -1,12 +1,13 @@
 from parsing import *
 import matplotlib.pyplot as plt
+from job import *
 
 zones = ["zone2", "zone3", "zone4", "zone5"]
 
 fname = "/Users/I545428/gh/controller-simulator/m-mig.log"
 data = [json.loads(line) for line in open(fname, "r")]
-rawjobs = get_pod_usage_on_nodes(data)
-jobs = merge_jobs(rawjobs)
+rawjobs = get_pod_usage_on_nodes_dict(data)
+jobs = create_jobs_from_dict(rawjobs)
 # jobs = adjust_time_stamps(jobs)
 
 
@@ -18,11 +19,15 @@ for z in zones:
     axis[z] = plots[z].add_subplot(1, 1, 1)
 
 
+total_job_time = 0
 for jobname, job in jobs.items():
+    jtime = job.get_execution_time()
+    print(jobname, "time:", jtime)
+    total_job_time += jtime
     for zone, poddata in job.get_pod_runs_for_plot():
         axis[zone].plot(poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x")
 
-
+print("Total job time", total_job_time, "s")
 # for idx, poddata in enumerate(job.node_data):
 #     if poddata:
 #         zone = job.node_order[idx]

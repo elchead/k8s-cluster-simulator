@@ -1,4 +1,4 @@
-from parsing import *
+from job import *
 
 
 def test_get_job_execution():
