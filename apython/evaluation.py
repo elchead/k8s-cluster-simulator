@@ -8,6 +8,41 @@ import numpy as np
 maxRestarts = 10
 
 
+def get_memory(t, node):
+    z2 = t["Nodes"][node]["TotalResourceUsage"]["memory"]
+    try:
+        z2 = int(z2)
+    except:
+        if z2[-1] == "k":
+            z2 = int(z2[:-1]) * 8192
+    return z2
+
+
+def bytestoOld(bytes, bsize=1024):
+    """convert bytes to megabytes, etc.
+       sample code:
+           print('mb= ' + str(bytesto(314575262000000, 'm')))
+       sample output: 
+           mb= 300002347.946
+    """
+
+    # a = {"k": 1, "m": 2, "g": 3, "t": 4, "p": 5, "e": 6}
+    # r = float(bytes)
+    # for i in range(a[to]):
+    #     r = r / bsize
+    d = 1 << 20
+
+    return bytes / d / 1e3
+
+
+def get_zone_memory(data, name):
+    z_mem = []
+    for t in data:
+        z2 = get_memory(t, name)
+        z_mem.append(bytestoOld(z2))
+    return z_mem
+
+
 def PodDataWith(time, memory):
     p = PodData()
     p.memory = memory
