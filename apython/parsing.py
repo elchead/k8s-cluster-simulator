@@ -8,11 +8,13 @@ import copy
 
 def get_memory(t, node):
     z2 = t["Nodes"][node]["TotalResourceUsage"]["memory"]
+    # print("before", z2)
     try:
         z2 = int(z2)
     except:
         if z2[-1] == "k":
-            z2 = int(z2[:-1]) * 8192
+            z2 = int(z2[:-1]) * 1000
+    # print("after", z2)
     return z2
 
 
