@@ -29,3 +29,6 @@ class TestGetPodRuns:
     def test_time_is_not_mutated(self):
         assert self.job.node_data[1].time == [10, 20, 30]
 
+    def test_nbr_migrations(self):
+        assert self.job.nbr_migrations == 1
+

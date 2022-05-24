@@ -21,8 +21,6 @@ class PodData:
         self.memory = []
         self.time = []
         self.migration_idx = []
-        self.checkpointed = False
-        self.restored = False
 
     def get_execution_time(self):
         return self.time[-1]
@@ -43,8 +41,13 @@ class Job:
 
     def add_pod(self, podname, node, nodedata: PodData):
         count = count_m(podname)
+        self._count_migration(count)
         self.node_order[count] = node
         self.node_data[count] = PodData.withdata(nodedata.time, nodedata.memory)
+
+    def _count_migration(self, count):
+        if count > self.nbr_migrations:
+            self.nbr_migrations = count
 
     def get_pod_runs_for_plot(self):
         data = [e for e in get_shifted_timestamps(self.node_data) if e]
@@ -198,48 +201,13 @@ def find_migration_points_and_merge_pods(pod_memories):
 
 
 def merge_jobs(job_node_dict):
-    # check and count prepended m's
     new_jobs = defaultdict(Job)  # [job][node]
-    for jobname, nodes in job_node_dict.items():
-        count = 0
-        if jobname.startswith("m"):
-            count = count_m(jobname)
-
-            # add migration index to pod with less m
-            for node, nodedata in nodes.items():
-                if nodedata.memory:
-                    old_node = list(job_node_dict[jobname[1:]].keys())[0]
-                    new_jobs[jobname[count:]].nodes[old_node].restored = True
-                new_jobs[jobname[count:]].node_order[count] = node
-
-            jobname = jobname[count:]
-            if count > new_jobs[jobname].nbr_migrations:
-                new_jobs[jobname].nbr_migrations = count
-
+    for podname, nodes in job_node_dict.items():
+        count = count_m(podname)
+        jobname = podname[count:]
         for node, nodedata in nodes.items():
-            if not jobname.startswith("m"):
-                new_jobs[jobname].node_order[0] = node
-            new_jobs[jobname].nodes[node].memory = nodedata.memory  # check if restarted on same node
-            new_jobs[jobname].nodes[node].time = nodedata.time
-
-            new_jobs[jobname].node_data[count] = PodData.withdata(
-                nodedata.time, nodedata.memory
-            )  # check if restarted on same node
-
+            new_jobs[jobname].add_pod(podname, node, nodedata)
     return new_jobs
-
-
-# def adjust_time_stamps(jobs: "dict[str,Job]"):
-#     for jobname, job in jobs.items():
-#         for idx, data in enumerate(job.node_data[1:]):
-#             if data:
-#                 last_time = jobs[jobname].node_data[idx].time[-1]
-#                 new_time = np.array(data.time) + last_time
-#                 data.time = new_time
-#                 if data.time[0] != 0:
-#                     data.migration_idx = [0]
-
-#     return jobs
 
 
 def get_shifted_timestamps(p: "List[PodData]"):
