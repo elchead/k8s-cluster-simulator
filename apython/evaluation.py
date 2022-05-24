@@ -2,6 +2,17 @@ import matplotlib.pyplot as plt
 from parsing import *
 from job import *
 
+zones = ["zone2", "zone3", "zone4", "zone5"]
+
+
+def evaluate_sim(title, plot, fname, nbr_jobs=50):
+    print(f"Evaluate {title}")
+    data, jobs = load_data(fname)
+    evaluate_jobs(zones, data, jobs, plot=plot, nbr_jobs=nbr_jobs)
+    print("----")
+    if plot:
+        plot_node_usage(title, data, zones)
+
 
 def load_data(fname):
     data = [json.loads(line) for line in open(fname, "r")]
@@ -31,7 +42,15 @@ def init_plot_dict(zones):
     return axis
 
 
-def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False):
+def maximum(a, b):
+
+    if a >= b:
+        return a
+    else:
+        return b
+
+
+def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None):
     axis = {}
     if plot:
         axis = init_plot_dict(zones)
@@ -39,29 +58,49 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False):
     total_job_time = 0
     zone_mem_utilization = {}
     zone_max_utilization = {}
+    job_max_mem = defaultdict(float)
     total_nbr_mig = 0
     for jobname, job in jobs.items():
-        total_nbr_mig += job.nbr_migrations
+        nbr = job.nbr_migrations
+        if nbr > 1:
+            print(jobname, "#migrations:", nbr)
+        total_nbr_mig += nbr
         jtime = job.get_execution_time()
         # print(jobname, "time:", jtime)
         total_job_time += jtime
         for zone, poddata in job.get_pod_runs_for_plot():
-            zone_mem = get_zone_memory(data, zone)
-            zone_mem_utilization[zone] = np.mean(zone_mem)
-            zone_max_utilization[zone] = np.max(zone_mem)
-            if plot:
+            job_max_mem[jobname] = maximum(np.max(poddata.memory), job_max_mem[jobname])
+            # if plot:
+            #     axis[zone].plot(
+            #         poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x"
+            # )
+
+    for zone in zones:
+        zone_mem = get_zone_memory(data, zone)
+        zone_mem_utilization[zone] = np.mean(zone_mem)
+        zone_max_utilization[zone] = np.max(zone_mem)
+
+    job_max_mem = dict(sorted(job_max_mem.items(), key=lambda item: item[1], reverse=True))
+    if not nbr_jobs:
+        nbr_jobs = len(job_max_mem)
+    top_pods = list(job_max_mem.keys())[:nbr_jobs]
+    for jobname, job in jobs.items():
+        for zone, poddata in job.get_pod_runs_for_plot():
+            job_max_mem[jobname] = maximum(np.max(poddata.memory), job_max_mem[jobname])
+            if plot and jobname in top_pods:
                 axis[zone].plot(
                     poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x"
                 )
+
     if plot:
         for z in zones:
             axis[z].legend()
         plt.xlabel("Time")
         plt.ylabel("Memory [Gb]")
         plt.show()
-
     print("Total jobs:", len(jobs.values()))
     print("Total #migrations:", total_nbr_mig)
     print("Total job time [s]:", total_job_time)
     print("Zone mean usage [Gb]:", zone_mem_utilization)
     print("Zone max usage [Gb]:", zone_max_utilization)
+    print("Most consuming jobs:\n", list(job_max_mem.items())[:nbr_jobs])
