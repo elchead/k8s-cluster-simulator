@@ -56,6 +56,7 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None)
         axis = init_plot_dict(zones)
 
     total_job_time = 0
+    total_migration_time = 0
     zone_mem_utilization = {}
     zone_max_utilization = {}
     job_max_mem = defaultdict(float)
@@ -78,9 +79,11 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None)
     top_pods = list(job_max_mem.keys())[:nbr_jobs]
     for jobname, job in jobs.items():
         nbr = job.nbr_migrations
-        if nbr > 1:
+        migtime = job.get_migration_time()
+        total_migration_time += migtime
+        if nbr > 0:
             print(
-                jobname, "size [Gb]:", job_max_mem[jobname], "#migrations:",nbr
+                jobname, "size [Gb]:", job_max_mem[jobname], "#migrations:", nbr, "migration time [s]:", migtime,
             )
         total_nbr_mig += nbr
 
@@ -96,9 +99,12 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None)
         plt.xlabel("Time")
         plt.ylabel("Memory [Gb]")
         plt.show()
+
+    total_job_time -= total_migration_time
     print("Total jobs:", len(jobs.values()))
     print("Total #migrations:", total_nbr_mig)
     print("Total job time [s]:", total_job_time)
+    print("Total migration time [s]:", total_migration_time)
     print("Zone mean usage [Gb]:", zone_mem_utilization)
     print("Zone max usage [Gb]:", zone_max_utilization)
     print("Most consuming jobs:\n", list(job_max_mem.items())[:nbr_jobs])

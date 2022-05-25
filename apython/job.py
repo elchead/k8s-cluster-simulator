@@ -2,8 +2,13 @@ from collections import defaultdict
 from typing import List
 import copy
 import numpy as np
+import math
 
 maxRestarts = 10
+
+
+def get_migration_time(gbSz: float):
+    return math.ceil(3.3506 * gbSz)
 
 
 def create_jobs_from_dict(job_node_dict):
@@ -32,19 +37,27 @@ def get_pod_usage_on_nodes_dict(data):
 
 class PodData:
     @classmethod
-    def withdata(cls, time, memory):
+    def withdata(cls, time, memory, is_migrated=False):
         p = cls()
         p.memory = memory
         p.time = time
+        p.is_migrated = is_migrated
         return p
 
     def __init__(self):
         self.memory = []
         self.time = []
         self.migration_idx = []
+        self.is_migrated = False
 
     def get_execution_time(self):
         return self.time[-1]
+
+    def get_migration_time(self):
+        if not self.is_migrated:
+            return 0
+        else:
+            return get_migration_time(self.memory[0])
 
 
 class Job:
@@ -66,7 +79,8 @@ class Job:
         self._count_migration(count)
         self._set_name(podname)
         self.node_order[count] = node
-        self.node_data[count] = PodData.withdata(nodedata.time, nodedata.memory)
+        is_migrated = count > 0
+        self.node_data[count] = PodData.withdata(nodedata.time, nodedata.memory, is_migrated=is_migrated)
 
     def _set_name(self, name):
         count = count_m(name)
@@ -86,6 +100,13 @@ class Job:
         for poddata in self.node_data:
             if poddata:
                 total += poddata.get_execution_time()
+        return total
+
+    def get_migration_time(self):
+        total = 0
+        for poddata in self.node_data:
+            if poddata:
+                total += poddata.get_migration_time()
         return total
 
 
