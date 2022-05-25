@@ -50,43 +50,84 @@ def maximum(a, b):
         return b
 
 
+class SimEvaluation:
+    total_job_time = 0
+
+    total_migration_time = 0
+    migration_times = {}
+    total_nbr_mig = 0
+
+    zone_mem_utilization = {}
+    zone_max_utilization = {}
+
+    job_max_mem = defaultdict(float)
+
+    def add_job_time(self, t):
+        self.total_job_time += t
+
+    def add_migration_time(self, t):
+        self.total_migration_time += t
+
+    def add_migration(self, jobname, nbr, time):
+        if nbr > 0:
+            self.migration_times[jobname] = nbr
+            self.total_nbr_mig += nbr
+            self.total_migration_time += time
+
+    def total_migrations(self):
+        return self.total_nbr_mig
+
+    def migration_time(self):
+        return self.total_migration_time
+
+    def job_time(self):
+        return self.total_job_time - self.total_migration_time
+
+    def set_job_max_mem(self, jobname, maxmem):
+        self.job_max_mem[jobname] = maximum(np.max(maxmem), self.job_max_mem[jobname])
+
+    def set_zone_stats(self, zone, mem):
+        self.zone_mem_utilization[zone] = np.mean(mem)
+        self.zone_max_utilization[zone] = np.max(mem)
+
+    def get_top_pods(self, nbr):
+        self.job_max_mem = dict(sorted(self.job_max_mem.items(), key=lambda item: item[1], reverse=True))
+        return list(self.job_max_mem.keys())[:nbr]
+
+    def get_top_pods_consumption(self, nbr) -> "List[tuple[str,int]]":
+        return list(self.job_max_mem.items())[:nbr]
+
+
 def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None):
+    res = SimEvaluation()
+    total_jobs = len(jobs.values())
+    if not nbr_jobs:
+        nbr_jobs = total_jobs
+
     axis = {}
     if plot:
         axis = init_plot_dict(zones)
 
-    total_job_time = 0
-    total_migration_time = 0
-    zone_mem_utilization = {}
-    zone_max_utilization = {}
-    job_max_mem = defaultdict(float)
-    total_nbr_mig = 0
     for jobname, job in jobs.items():
-
-        jtime = job.get_execution_time()
-        # print(jobname, "time:", jtime)
-        total_job_time += jtime
+        res.add_job_time(job.get_execution_time())
+        res.add_migration(jobname, job.nbr_migrations, job.get_migration_time())
         for zone, poddata in job.get_pod_runs_for_plot():
-            job_max_mem[jobname] = maximum(np.max(poddata.memory), job_max_mem[jobname])
+            res.set_job_max_mem(jobname, np.max(poddata.memory))
     for zone in zones:
-        zone_mem = get_zone_memory(data, zone)
-        zone_mem_utilization[zone] = np.mean(zone_mem)
-        zone_max_utilization[zone] = np.max(zone_mem)
+        res.set_zone_stats(zone, get_zone_memory(data, zone))
 
-    job_max_mem = dict(sorted(job_max_mem.items(), key=lambda item: item[1], reverse=True))
-    if not nbr_jobs:
-        nbr_jobs = len(job_max_mem)
-    top_pods = list(job_max_mem.keys())[:nbr_jobs]
+    top_pods = res.get_top_pods(nbr_jobs)
     for jobname, job in jobs.items():
-        nbr = job.nbr_migrations
-        migtime = job.get_migration_time()
-        total_migration_time += migtime
-        if nbr > 0:
+        if job.nbr_migrations > 0:
             print(
-                jobname, "size [Gb]:", job_max_mem[jobname], "#migrations:", nbr, "migration time [s]:", migtime,
+                jobname,
+                "size [Gb]:",
+                res.job_max_mem[jobname],
+                "#migrations:",
+                job.nbr_migrations,
+                "migration time [s]:",
+                job.get_migration_time(),
             )
-        total_nbr_mig += nbr
-
         for zone, poddata in job.get_pod_runs_for_plot():
             if plot and jobname in top_pods:
                 axis[zone].plot(
@@ -100,11 +141,10 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None)
         plt.ylabel("Memory [Gb]")
         plt.show()
 
-    total_job_time -= total_migration_time
-    print("Total jobs:", len(jobs.values()))
-    print("Total #migrations:", total_nbr_mig)
-    print("Total job time [s]:", total_job_time)
-    print("Total migration time [s]:", total_migration_time)
-    print("Zone mean usage [Gb]:", zone_mem_utilization)
-    print("Zone max usage [Gb]:", zone_max_utilization)
-    print("Most consuming jobs:\n", list(job_max_mem.items())[:nbr_jobs])
+    print("Total jobs:", total_jobs)
+    print("Total #migrations:", res.total_migrations())
+    print("Total job time [s]:", res.job_time())
+    print("Total migration time [s]:", res.migration_time())
+    print("Zone mean usage [Gb]:", res.zone_mem_utilization)
+    print("Zone max usage [Gb]:", res.zone_max_utilization)
+    print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
