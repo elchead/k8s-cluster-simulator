@@ -61,20 +61,12 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None)
     job_max_mem = defaultdict(float)
     total_nbr_mig = 0
     for jobname, job in jobs.items():
-        nbr = job.nbr_migrations
-        if nbr > 1:
-            print(jobname, "#migrations:", nbr)
-        total_nbr_mig += nbr
+
         jtime = job.get_execution_time()
         # print(jobname, "time:", jtime)
         total_job_time += jtime
         for zone, poddata in job.get_pod_runs_for_plot():
             job_max_mem[jobname] = maximum(np.max(poddata.memory), job_max_mem[jobname])
-            # if plot:
-            #     axis[zone].plot(
-            #         poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x"
-            # )
-
     for zone in zones:
         zone_mem = get_zone_memory(data, zone)
         zone_mem_utilization[zone] = np.mean(zone_mem)
@@ -85,8 +77,14 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None)
         nbr_jobs = len(job_max_mem)
     top_pods = list(job_max_mem.keys())[:nbr_jobs]
     for jobname, job in jobs.items():
+        nbr = job.nbr_migrations
+        if nbr > 1:
+            print(
+                jobname, "size [Gb]:", job_max_mem[jobname], "#migrations:",nbr
+            )
+        total_nbr_mig += nbr
+
         for zone, poddata in job.get_pod_runs_for_plot():
-            job_max_mem[jobname] = maximum(np.max(poddata.memory), job_max_mem[jobname])
             if plot and jobname in top_pods:
                 axis[zone].plot(
                     poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x"
