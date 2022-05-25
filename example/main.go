@@ -93,6 +93,7 @@ var rootCmd = &cobra.Command{
 		submitter := jobparser.NewJobSubmitterWithFactory(jobs,podFactory)
 		sim.AddSubmitter("JobSubmitter", submitter)
 		if useMigrator {
+			log.L.Info("Setting migration threshold:",nodeFreeThreshold)
 			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
 			requestPolicy := monitoring.NewThresholdPolicyWithCluster(nodeFreeThreshold, cluster, metricClient)
 			migrationPolicy := monitoring.OptimalMigrator{Cluster: cluster, Client: metricClient}

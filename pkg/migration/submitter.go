@@ -64,7 +64,7 @@ func (m *MigrationSubmitter) Submit(
 	if m.checker.IsReady(currentTime) {
 		migrations, err := m.controller.GetMigrations()
 		if err != nil {
-			return []submitter.Event{}, errors.Wrap(err, "migration controller failed")
+			return []submitter.Event{}, errors.Wrap(err, "migrator failed")
 		}
 		err = m.startMigrations(migrations, currentTime)
 		if err != nil {
