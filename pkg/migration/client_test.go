@@ -18,6 +18,50 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestMemorizer(t *testing.T){
+	sut := &migration.Memorizer[int]{MemoInterval: 3}
+	sut.Update(1)
+	sut.Update(2)
+	sut.Update(3)
+	assert.Equal(t,3,sut.Value())
+	assert.Equal(t,1,sut.Prior())
+	sut.Update(4)
+	sut.Update(5)
+	sut.Update(6)
+	assert.Equal(t,4,sut.Prior())
+	
+}
+
+func TestMemorizerWithPodMemMap(t *testing.T){
+	m := make(map[string]monitoring.PodMemMap)
+	m["z1"] = make(monitoring.PodMemMap)
+	m["z1"]["worker"] = 1
+	sut := &migration.Memorizer[monitoring.PodMemMap]{MemoInterval: 3}
+	// assert.Equal(t,"",sut.Value())
+	sut.Update(m["z1"].Copy())
+	m["z1"]["worker"] = 2
+	sut.Update(m["z1"].Copy())
+	m["z1"]["worker"] = 3
+	sut.Update(m["z1"].Copy())
+	assert.Equal(t,1.,sut.Prior()["worker"])
+}
+
+func TestGetSlope(t *testing.T) {
+	sut := migration.NewClientWithMemoStep(3)
+
+	podmetrics := map[string]pod.Metrics{"worker":{Node:"zone3",ResourceUsage:createMemoryResource(50.)}}
+	sut.UpdatePodMetrics(podmetrics)
+	podmetrics = map[string]pod.Metrics{"worker":{Node:"zone3",ResourceUsage:createMemoryResource(75.)}}
+	sut.UpdatePodMetrics(podmetrics)
+	podmetrics = map[string]pod.Metrics{"worker":{Node:"zone3",ResourceUsage:createMemoryResource(80.)}}
+	sut.UpdatePodMetrics(podmetrics)
+	
+	res, err := sut.GetPodMemorySlope("zone3","worker","now","1m")
+	assert.NoError(t, err)
+	assert.Equal(t,30.,res)
+	
+}
 func TestCreateNode(t *testing.T) {
 	node,err := newNode("zone2","450Gi")
 	assert.NoError(t, err)

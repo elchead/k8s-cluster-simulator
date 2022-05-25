@@ -9,14 +9,45 @@ import (
 	"github.com/elchead/k8s-cluster-simulator/pkg/node"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 )
+
+
+type Memorizer[T interface{}] struct {
+	MemoInterval int
+	data T
+	prior T
+	currentStep int
+}
+
+func (m *Memorizer[T]) Update(data T) {
+	m.data = data
+	if m.currentStep % m.MemoInterval == 0 {
+		m.prior = m.data
+	}
+	m.currentStep++
+}
+
+func (m *Memorizer[T]) Value() T {
+	return m.data
+}
+
+func (m *Memorizer[T]) Prior() T {
+	return m.prior
+}
+
 type Client struct {
 	UsedMemoryMap map[string]int64 // key: nodeName
 	TotalMemoryMap map[string]int64 // key: nodeName
 	PodMemoryMap map[string]monitoring.PodMemMap // key: nodeName
+	PodMemorizer map[string]*Memorizer[monitoring.PodMemMap]
+	MemoInterval int
 }
 
 func NewClient() *Client {
-	return &Client{UsedMemoryMap: make(map[string]int64), TotalMemoryMap: make(map[string]int64), PodMemoryMap: make(map[string]monitoring.PodMemMap)}
+	return NewClientWithMemoStep(5)
+}
+
+func NewClientWithMemoStep(memostep int) *Client {
+	return &Client{UsedMemoryMap: make(map[string]int64), TotalMemoryMap: make(map[string]int64), PodMemoryMap: make(map[string]monitoring.PodMemMap),PodMemorizer: make(map[string]*Memorizer[monitoring.PodMemMap]),MemoInterval: memostep}
 }
 
 func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
@@ -24,8 +55,7 @@ func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
 	if len(c.PodMemoryMap[pd.Node]) == 0 {
 		c.PodMemoryMap[pd.Node] = make(monitoring.PodMemMap)		
 	} 
-	podmap := c.PodMemoryMap[pd.Node]
-	podmap[podname] = float64(intUsage)
+	c.PodMemoryMap[pd.Node][podname] = float64(intUsage)
 }
 
 func (c *Client) UpdatePodMetrics(pods map[string]pod.Metrics) {
@@ -33,13 +63,32 @@ func (c *Client) UpdatePodMetrics(pods map[string]pod.Metrics) {
 	for podname,pod := range pods {
 		c.UpdatePodMetric(podname,pod)
 	}
+	c.updateMemorizer()
+}
+
+func (c *Client) updateMemorizer() {
+	for node, pod := range c.PodMemoryMap {
+		if c.PodMemorizer[node] == nil {
+			c.PodMemorizer[node] = &Memorizer[monitoring.PodMemMap]{MemoInterval: c.MemoInterval}
+		}
+		c.PodMemorizer[node].Update(pod.Copy())
+	}
+}
+
+func (c Client) GetPodMemorySlope(node, name, time, slopeWindow string) (float64, error) {
+	val,ok := c.PodMemorizer[node].Value()[name]
+	pval,pok := c.PodMemorizer[node].Prior()[name]
+	if !ok || !pok {
+		return -1., errors.New("could not get pod memory for node " +name)
+	}
+	return val - pval,nil
 }
 
 // in Gb
-func (c *Client) GetPodMemories(name string) (monitoring.PodMemMap,error) {
-	val, ok := c.PodMemoryMap[name]
+func (c *Client) GetPodMemories(node string) (monitoring.PodMemMap,error) {
+	val, ok := c.PodMemoryMap[node]
 	if !ok {
-		return nil, errors.New("could not get pod memory for node " +name)
+		return nil, errors.New("could not get pod memory for node " +node)
 	}
 	// log.L.Debug("Podmemories",name, val)
 	return val,nil
