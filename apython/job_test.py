@@ -30,7 +30,10 @@ class TestGetPodRuns:
     job = Job()
     job.add_pod("mowo", "zone3", PodData.withdata([10, 20, 30], [4, 5, 6]))
     job.add_pod("owo", "zone2", PodData.withdata([10, 20, 30], [1, 2, 3]))
+    job2 = Job()
+    job2.add_pod("oza", "zone2", PodData.withdata([10, 20, 30], [1, 2, 3]))
     it = tuple(job.get_pod_runs_for_plot())
+    it2 = tuple(job2.get_pod_runs_for_plot())
 
     def test_first_item(self):
         zone, poddata = self.it[0]
@@ -49,4 +52,16 @@ class TestGetPodRuns:
 
     def test_nbr_migrations(self):
         assert self.job.nbr_migrations == 1
+
+    def test_migrated_pod_is_marked_at_end(self):
+        zone, poddata = self.it[0]
+        assert [2] == poddata.migration_idx
+
+    def test_restarted_pod_is_marked_at_beginning(self):
+        zone, poddata = self.it[1]
+        assert [0] == poddata.migration_idx
+
+    def test_not_migrated_pod_is_not_marked(self):
+        zone, poddata = self.it2[0]
+        assert [] == poddata.migration_idx
 

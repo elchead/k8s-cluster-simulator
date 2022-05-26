@@ -91,7 +91,7 @@ class Job:
             self.nbr_migrations = count
 
     def get_pod_runs_for_plot(self):
-        data = [e for e in get_shifted_timestamps(self.node_data) if e]
+        data = [e for e in add_migration_idx(get_shifted_timestamps(self.node_data)) if e]
         zones = [e for e in self.node_order if e != ""]
         return zip(zones, data)
 
@@ -117,9 +117,21 @@ def get_shifted_timestamps(p: "List[PodData]"):
             last_time = cp[prior_idx].time[-1]
             new_time = np.array(data.time) + last_time
             data.time = new_time
+    return cp
+
+
+def add_migration_idx(p):
+    last_restarted_idx = -1
+    for prior_idx, data in enumerate(p[1:]):
+        if data:
+            # was restarted
             if data.time[0] != 0:
                 data.migration_idx = [0]
-    return cp
+                last_restarted_idx = prior_idx + 1
+    for idx, data in enumerate(p):
+        if last_restarted_idx > idx:
+            data.migration_idx.append(len(data.memory) - 1)
+    return p
 
 
 def get_pods(stamp):
