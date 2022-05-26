@@ -43,11 +43,15 @@ func main() {
 
 // configPath is the path of the config file, defaulting to "config".
 var configPath string
+var migPolicy string
+var requestPolicy string
 var useMigrator bool
 var nodeFreeThreshold float64
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "config", "config file (excluding file extension)")
+	rootCmd.PersistentFlags().StringVar(&migPolicy, "migPolicy", "optimal", "Migration choice policy: optimal,max,big-enough")
+	rootCmd.PersistentFlags().StringVar(&requestPolicy, "reqPolicy", "threshold", "Policy to request memory freeing: threshold")
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
 	rootCmd.PersistentFlags().Float64Var(&nodeFreeThreshold, "threshold", 45., "node free threshold in % (default 45.)")
 }
@@ -95,8 +99,8 @@ var rootCmd = &cobra.Command{
 		if useMigrator {
 			log.L.Info("Setting migration threshold:",nodeFreeThreshold)
 			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
-			requestPolicy := monitoring.NewThresholdPolicyWithCluster(nodeFreeThreshold, cluster, metricClient)
-			migrationPolicy := monitoring.OptimalMigrator{Cluster: cluster, Client: metricClient}
+			requestPolicy := monitoring.NewRequestPolicy(requestPolicy, cluster, metricClient,nodeFreeThreshold)
+			migrationPolicy := monitoring.NewMigrationPolicy(migPolicy,cluster,metricClient)
 			migController := monitoring.NewController(requestPolicy, migrationPolicy)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory))
 		}
