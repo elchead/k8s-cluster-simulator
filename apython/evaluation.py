@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from parsing import *
 from job import *
+from plotting import *
 
 zones = ["zone2", "zone3", "zone4", "zone5"]
 
@@ -19,31 +20,6 @@ def load_data(fname):
     rawjobs = get_pod_usage_on_nodes_dict(data)
     jobs = create_jobs_from_dict(rawjobs)
     return data, jobs
-
-
-def plot_node_usage(title, data, zones):
-    plt.figure()
-    plt.title(title)
-    plt.xlabel("Time")
-    plt.ylabel("Memory [Gb]")
-    for zone in zones:
-        plt.plot(get_zone_memory(data, zone), label=zone)
-    plt.legend()
-    plt.savefig(title.replace(" ", "_"))
-
-
-def init_plot_dict(title, zones):
-    plots = {}
-    axis = {}
-    fig, axs = plt.subplots(2, len(zones) - 2, sharex=True)
-    fig.suptitle(f"Pod memories ({title})")
-
-    fig.text(0.5, 0.04, "Time", ha="center")
-    fig.text(0.04, 0.5, "Memory [Gb]", va="center", rotation="vertical")
-    for i, z in enumerate(zones):
-        axs[int(i / 2), int(i % 2)].set_title(z)
-        axis[z] = axs[int(i / 2), int(i % 2)]
-    return fig, axis
 
 
 def maximum(a, b):
@@ -151,8 +127,8 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
                 )
 
     if plot:
-        for z in zones:
-            axis[z].legend()
+        # for z in zones:
+        #     axis[z].legend()
 
         t = title.replace(" ", "_")
         plt.savefig(f"pod_mem_{t}")
