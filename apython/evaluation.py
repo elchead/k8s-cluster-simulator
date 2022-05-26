@@ -8,7 +8,7 @@ zones = ["zone2", "zone3", "zone4", "zone5"]
 def evaluate_sim(title, plot, fname, nbr_jobs=50):
     print(f"Evaluate {title}")
     data, jobs = load_data(fname)
-    evaluate_jobs(zones, data, jobs, plot=plot, nbr_jobs=nbr_jobs)
+    evaluate_jobs(zones, data, jobs, title, plot=plot, nbr_jobs=nbr_jobs)
     print("----")
     if plot:
         plot_node_usage(title, data, zones)
@@ -29,17 +29,21 @@ def plot_node_usage(title, data, zones):
     for zone in zones:
         plt.plot(get_zone_memory(data, zone), label=zone)
     plt.legend()
-    plt.show()
+    plt.savefig(title.replace(" ", "_"))
 
 
-def init_plot_dict(zones):
+def init_plot_dict(title, zones):
     plots = {}
     axis = {}
-    for z in zones:
-        plots[z] = plt.figure()
-        plots[z].suptitle(z)
-        axis[z] = plots[z].add_subplot(1, 1, 1)
-    return axis
+    fig, axs = plt.subplots(2, len(zones) - 2, sharex=True)
+    fig.suptitle(f"Pod memories ({title})")
+
+    fig.text(0.5, 0.04, "Time", ha="center")
+    fig.text(0.04, 0.5, "Memory [Gb]", va="center", rotation="vertical")
+    for i, z in enumerate(zones):
+        axs[int(i / 2), int(i % 2)].set_title(z)
+        axis[z] = axs[int(i / 2), int(i % 2)]
+    return fig, axis
 
 
 def maximum(a, b):
@@ -98,15 +102,16 @@ class SimEvaluation:
         return list(self.job_max_mem.items())[:nbr]
 
 
-def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None):
+def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_jobs=None):
     res = SimEvaluation()
     total_jobs = len(jobs.values())
     if not nbr_jobs:
         nbr_jobs = total_jobs
 
     axis = {}
+    fig = None
     if plot:
-        axis = init_plot_dict(zones)
+        fig, axis = init_plot_dict(title, zones)
 
     for jobname, job in jobs.items():
         res.add_job_time(job.get_execution_time())
@@ -116,6 +121,17 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None)
     for zone in zones:
         res.set_zone_stats(zone, get_zone_memory(data, zone))
 
+    print("Total jobs:", total_jobs)
+    print("Total #migrations:", res.total_migrations())
+    print("Total job time [s]:", res.job_time())
+    print("Total migration time [s]:", res.migration_time())
+    memmean = np.mean(list(res.zone_mem_utilization.values()))
+    print("Mean memory usage [Gb]:", memmean, f"({memmean/450*100}%)")
+    print("Zone mean usage [Gb]:", res.zone_mem_utilization)
+    print("Zone max usage [Gb]:", res.zone_max_utilization)
+    print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
+
+    print("Migrated pods:")
     top_pods = res.get_top_pods(nbr_jobs)
     for jobname, job in jobs.items():
         if job.nbr_migrations > 0:
@@ -137,14 +153,7 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", plot=False, nbr_jobs=None)
     if plot:
         for z in zones:
             axis[z].legend()
-        plt.xlabel("Time")
-        plt.ylabel("Memory [Gb]")
-        plt.show()
 
-    print("Total jobs:", total_jobs)
-    print("Total #migrations:", res.total_migrations())
-    print("Total job time [s]:", res.job_time())
-    print("Total migration time [s]:", res.migration_time())
-    print("Zone mean usage [Gb]:", res.zone_mem_utilization)
-    print("Zone max usage [Gb]:", res.zone_max_utilization)
-    print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
+        t = title.replace(" ", "_")
+        plt.savefig(f"pod_mem_{t}")
+
