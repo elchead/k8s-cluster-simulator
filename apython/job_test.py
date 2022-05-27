@@ -6,6 +6,22 @@ def test_get_migration_time():
     assert 168.0 == get_migration_time(50.0)
 
 
+def test_poddata_migration():
+    sut = PodData.withdata([10, 20, 30], [50, 40, 50], is_migrated=True)
+    assert 10 == sut.get_migration_timestamp()
+    assert 50 == sut.get_migration_size()
+
+
+# def test_cnstruct_migration_plot_data():
+#     t = 100
+#     duration = 500
+#     sz = 50
+#     tick_interval = 100
+#     x, y = create_migration_blocker_data(t, duration, sz, tick_interval)
+#     assert ([100, 200, 300, 400, 500, 600] == x).all()
+#     assert ([50, 50, 50, 50, 50, 50] == y).all()
+
+
 class TestMigrationTime:
     job = Job()
     job.add_pod("owo", "zone2", PodData.withdata([10, 20, 30], [1, 2, 50]))

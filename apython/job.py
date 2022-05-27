@@ -23,6 +23,7 @@ def create_jobs_from_dict(job_node_dict):
 
 def get_pod_usage_on_nodes_dict(data):
     pods = defaultdict(lambda: defaultdict(PodData))  # [job][node]
+    t_idx = 0
     for d in data:
         for k, v in get_pods(d).items():
             job = k.split("/")[1]
@@ -32,6 +33,9 @@ def get_pod_usage_on_nodes_dict(data):
                 continue
             pods[job][node].memory.append(bytesto(v["ResourceUsage"]["memory"]))
             pods[job][node].time.append(v["ExecutedSeconds"])
+            if pods[job][node].t_idx == -1:
+                pods[job][node].t_idx = t_idx
+        t_idx += 1
     return pods
 
 
@@ -49,15 +53,32 @@ class PodData:
         self.time = []
         self.migration_idx = []
         self.is_migrated = False
+        self.t_idx = -1
 
     def get_execution_time(self):
         return self.time[-1]
 
-    def get_migration_time(self):
+    def get_migration_duration(self):
         if not self.is_migrated:
             return 0
         else:
-            return get_migration_time(self.memory[0])
+            return get_migration_time(self.get_migration_size())
+
+    def get_migration_timestamp(self):
+        if not self.is_migrated:
+            raise Exception("No migration timestamp for non-migrated pod")
+        return self.time[0]
+
+    def get_migration_size(self):
+        if not self.is_migrated:
+            raise Exception("No migration timestamp for non-migrated pod")
+        return self.memory[0]
+
+
+def create_migration_blocker_data(t, duration, sz, tick_interval):
+    time = np.arange(t - (duration / float(tick_interval)), t + 1, tick_interval)
+    y = np.full(len(time), sz)
+    return time, y
 
 
 class Job:
@@ -106,7 +127,7 @@ class Job:
         total = 0
         for poddata in self.node_data:
             if poddata:
-                total += poddata.get_migration_time()
+                total += poddata.get_migration_duration()
         return total
 
 
