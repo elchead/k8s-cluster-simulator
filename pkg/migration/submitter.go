@@ -88,7 +88,7 @@ func (m *MigrationSubmitter) getEventsFromMigrations(currentTime clock.Clock) []
 		jobTime := clock.NewClock(nextJob.StartAt)
 		if jobTime.BeforeOrEqual(currentTime) {
 			log.L.Debug("pop from queue:", nextJob.Name)
-			pod := m.factory.New(nextJob)
+			pod := m.factory.NewMigratedPod(nextJob)
 			nextJob.IsMigrating = false
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
 

@@ -17,6 +17,22 @@ func TestPodFactory(t *testing.T) {
 	assert.Empty(t,podspec.Spec.Containers)
 }
 
+func TestPodFactorySetMigratedResources(t *testing.T) {
+	podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: time.Now(), Usage: 2e2}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e5}}}
+	
+	sut := PodFactory{SetResources: false}
+	podspec := sut.NewMigratedPod(podmem)
+	assert.NotEmpty(t,podspec.Spec.Containers[0].Resources.Requests["memory"])
+}
+
+func TestPodFactoryWithResources(t *testing.T) {
+	sut := PodFactory{SetResources: false}
+
+	podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: time.Now(), Usage: 1e9}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e2}}}
+	podspec := sut.NewWithResources(podmem,"10Gi")
+	assert.Empty(t,podspec.Spec.Containers)
+}
+
 func TestPodSpecFromPodMemory(t *testing.T) {
 	now := time.Now()
 	podmem := PodMemory{Name: "w1", Records: []Record{{Time: now, Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 1e2}}}

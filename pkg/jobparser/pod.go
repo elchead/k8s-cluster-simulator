@@ -28,6 +28,25 @@ func (f PodFactory)  New(podinfo PodMemory) *v1.Pod {
 	}
 }
 
+func (f PodFactory)  NewMigratedPod(podinfo PodMemory) *v1.Pod {
+	// todo set parameter for increase
+	return f.NewWithResources(podinfo,fmt.Sprintf(`%f`,1.2 *podinfo.Records[0].Usage))
+}
+
+func (f PodFactory)  NewWithResources(podinfo PodMemory,memSize string) *v1.Pod {
+	pod := CreatePodWithoutResources(podinfo)
+	pod.Spec = v1.PodSpec{
+		Containers: []v1.Container{
+			{
+				Name:  "worker",
+				Image: "worker-image",
+				Resources: GetPodRequest(memSize),
+			},
+		},
+	}
+	return pod
+}
+
 func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
 	res := make([]Record,0)
 	var beforeIdx int
@@ -157,6 +176,16 @@ func GetJobResourceLimit() v1.ResourceList {
 func GetJobResources(size string) v1.ResourceRequirements {
 	return v1.ResourceRequirements{
 		Requests: GetJobResourceRequest(size),
+		Limits: GetJobResourceLimit(),
+	}
+}
+
+func GetPodRequest(memSize string) v1.ResourceRequirements {
+	return v1.ResourceRequirements{
+		Requests: v1.ResourceList{
+			"cpu":            resource.MustParse("5"),
+			"memory":         resource.MustParse(memSize),
+		      },
 		Limits: GetJobResourceLimit(),
 	}
 }
