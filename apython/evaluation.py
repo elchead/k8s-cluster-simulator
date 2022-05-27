@@ -12,7 +12,8 @@ def evaluate_sim(title, plot, fname, nbr_jobs=50):
     evaluate_jobs(zones, data, jobs, title, plot=plot, nbr_jobs=nbr_jobs)
     print("----")
     if plot:
-        plot_node_usage(title, data, zones)
+        plot_node_usage_with_mig_markers(title, data, zones)
+        # plot_node_usage(title, data, zones)
 
 
 def load_data(fname):
