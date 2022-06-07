@@ -56,7 +56,24 @@ func TestGetSlope(t *testing.T) {
 	sut.UpdatePodMetrics(podmetrics)
 	podmetrics = map[string]pod.Metrics{"worker":{Node:"zone3",ResourceUsage:createMemoryResource(80.)}}
 	sut.UpdatePodMetrics(podmetrics)
-	
+
+	t.Run("get slope on different node", func(t *testing.T){
+		podmetrics := map[string]pod.Metrics{"worker2":{Node:"zone2",ResourceUsage:createMemoryResource(10.)},"worker3":{Node:"zone2",ResourceUsage:createMemoryResource(20.)}}
+		sut.UpdatePodMetrics(podmetrics)
+		podmetrics = map[string]pod.Metrics{"worker2":{Node:"zone2",ResourceUsage:createMemoryResource(75.)},"worker3":{Node:"zone2",ResourceUsage:createMemoryResource(20.)}}
+		sut.UpdatePodMetrics(podmetrics)
+		podmetrics = map[string]pod.Metrics{"worker2":{Node:"zone2",ResourceUsage:createMemoryResource(30.)},"worker3":{Node:"zone2",ResourceUsage:createMemoryResource(30.)}}
+		sut.UpdatePodMetrics(podmetrics)
+
+		res2, err := sut.GetPodMemorySlope("zone2","worker2","now","1m")
+		assert.NoError(t, err)
+		assert.Equal(t,20.,res2)
+
+		res3, err := sut.GetPodMemorySlope("zone2","worker3","now","1m")
+		assert.NoError(t, err)
+		assert.Equal(t,10.,res3)
+	})
+
 	res, err := sut.GetPodMemorySlope("zone3","worker","now","1m")
 	assert.NoError(t, err)
 	assert.Equal(t,30.,res)
