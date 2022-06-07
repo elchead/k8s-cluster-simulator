@@ -106,7 +106,6 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
     print("Mean memory usage [Gb]:", memmean, f"({memmean/450*100}%)")
     print("Zone mean usage [Gb]:", res.zone_mem_utilization)
     print("Zone max usage [Gb]:", res.zone_max_utilization)
-    print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
 
     print("Migrated pods:")
     top_pods = res.get_top_pods(nbr_jobs)
@@ -126,6 +125,7 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
                 axis[zone].plot(
                     poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x"
                 )
+    print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
 
     if plot:
         # for z in zones:
