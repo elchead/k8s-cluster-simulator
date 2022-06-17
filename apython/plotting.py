@@ -11,7 +11,8 @@ def plot_node_usage_with_mig_markers(title, data, zones):
     rawjobs = get_pod_usage_on_nodes_dict(data)
     color_dict = {"zone2": "b", "zone3": "y", "zone4": "g", "zone5": "r"}
     for zone in zones:
-        plt.plot(get_zone_memory(data, zone), label=zone, c=color_dict[zone])
+        mem = get_zone_memory(data, zone)
+        plt.plot(mem, label=zone, c=color_dict[zone])
 
     # ax = fig.gca()
     # for i, p in enumerate(ax.get_lines()):  # this is the loop to change Labels and colors
@@ -31,6 +32,15 @@ def plot_node_usage_with_mig_markers(title, data, zones):
     plt.legend(by_label.values(), by_label.keys())
     # plt.legend()
     plt.savefig(title.replace(" ", "_"))
+
+    plt.figure()
+    plt.title("Slope " + title)
+    for zone in zones:
+        mem = get_zone_memory(data, zone)
+        slope = np.diff(mem)
+        plt.plot(slope, label=zone, c=color_dict[zone])
+    plt.legend(by_label.values(), by_label.keys())
+    plt.savefig("slope_" + title.replace(" ", "_"))
 
 
 def plot_node_usage(title, data, zones):

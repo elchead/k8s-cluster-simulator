@@ -51,7 +51,7 @@ var nodeFreeThreshold float64
 func init() {
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "config", "config file (excluding file extension)")
 	rootCmd.PersistentFlags().StringVar(&migPolicy, "migPolicy", "optimal", "Migration choice policy: optimal,max,big-enough")
-	rootCmd.PersistentFlags().StringVar(&requestPolicy, "reqPolicy", "threshold", "Policy to request memory freeing: threshold")
+	rootCmd.PersistentFlags().StringVar(&requestPolicy, "reqPolicy", "threshold", "Policy to request memory freeing: threshold,slope")
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
 	rootCmd.PersistentFlags().Float64Var(&nodeFreeThreshold, "threshold", 45., "node free threshold in % (default 45.)")
 }
