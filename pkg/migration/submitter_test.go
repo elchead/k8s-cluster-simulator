@@ -29,6 +29,7 @@ func (suite *MigrationSuite) SetupTest() {
 	copy(suite.jobs, jobs)
 }
 
+
 func (suite *MigrationSuite) TestMigrateMultipleJobs() {
 	controllerStub := new(ControllerStub)
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil).Once()
@@ -39,7 +40,7 @@ func (suite *MigrationSuite) TestMigrateMultipleJobs() {
 	suite.Run("do not issue migration pod before migration time finished", func() {
 		events, err := sut.Submit(clockNow, nil, nil)
 		assert.NoError(suite.T(), err)
-		assert.Empty(suite.T(), events)
+		assertNoPodEvent(suite.T(), events)
 	})
 	suite.Run("do not call migration controller while migration in progress", func(){
 		sut.Submit(clockNow, nil, nil)
@@ -97,14 +98,14 @@ func (suite *MigrationSuite) TestBackoffIntervalAfterMigration() {
 
 }
 
-func (suite *MigrationSuite) TestTestTerminateSubmitterAtEndTime() {
+func (suite *MigrationSuite) TestTerminateSubmitterAtEndTime() {
 	controllerStub := new(ControllerStub)
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil)
 
 	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,suite.jobs,endTime) 
 	events, err := sut.Submit(clock.NewClock(endTime), nil, nil)	
 	assert.NoError(suite.T(), err)
-	assertTerminateEvent(suite.T(),events[0])
+	assert.Contains(suite.T(), events, &submitter.TerminateSubmitterEvent{})
 }
 
 func (suite *MigrationSuite) TestAfterMigration() {
@@ -120,12 +121,30 @@ func (suite *MigrationSuite) TestAfterMigration() {
 		events := assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mj2")
 		assertDeleteEvent(suite.T(),events[1],"j2")
 	})
+}
 
+func (suite *MigrationSuite) TestFreezeUsage() {
+	controllerStub := new(ControllerStub)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil)
+
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,suite.jobs,endTime)
+	suite.Run("issue freeze event for migration",func(){
+		events, err := sut.Submit(clockNow, nil, nil)
+		assert.NoError(suite.T(), err)
+		assert.Contains(suite.T(),events,&submitter.FreezeUsageEvent{PodKey: "default/j2"})
+	})
 }
 
 func TestMigrationSuite(t *testing.T) {
 	suite.Run(t, new(MigrationSuite))
 }
+
+func assertNoPodEvent(t *testing.T, events []submitter.Event) {
+	for _,event := range events {
+		assert.IsType(t, &submitter.FreezeUsageEvent{}, event)
+	}
+}
+
 
 func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *migration.MigrationSubmitter, migratedPodName string) []submitter.Event {
 	afterMigration := submissionTime.Add(migration.MigrationTime)
@@ -133,17 +152,6 @@ func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *m
 	assert.NoError(t, err)
 	assertSubmitEvent(t, events[0], migratedPodName)
 	return events
-}
-
-
-
-func assertTerminateEvent(t testing.TB, event submitter.Event) {
-	assert.True(t, isTerminateEvent(event))
-}
-
-func isTerminateEvent(event submitter.Event) (ok bool) {
-	_, ok = event.(*submitter.TerminateSubmitterEvent)
-	return
 }
 
 func assertDeleteEvent(t testing.TB, event submitter.Event, podName string) {

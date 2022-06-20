@@ -61,6 +61,7 @@ func (m *MigrationSubmitter) Submit(
 	currentTime clock.Clock,
 	n algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error) {
+	var freezevents []submitter.Event
 	if m.checker.IsReady(currentTime) {
 		migrations, err := m.controller.GetMigrations()
 		if err != nil {
@@ -70,9 +71,16 @@ func (m *MigrationSubmitter) Submit(
 		if err != nil {
 			return []submitter.Event{}, errors.Wrap(err, "failed to start migration")
 		}
-	}
-	events := m.getEventsFromMigrations(currentTime)
 
+		freezevents = make([]submitter.Event, 0, len(migrations)+1)
+		for _, cmd := range migrations {
+			freezevents = append(freezevents, &submitter.FreezeUsageEvent{PodKey:cmd.Pod})
+		}
+
+	}
+	migevents := m.getEventsFromMigrations(currentTime)
+	events := append(freezevents, migevents...)
+	
 	// terminate
 	isSimulationFinished := m.endTime.BeforeOrEqual(currentTime)
 	if isSimulationFinished {

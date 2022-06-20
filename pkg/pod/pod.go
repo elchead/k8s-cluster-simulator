@@ -32,6 +32,7 @@ type Pod struct {
 	boundAt clock.Clock
 	status  Status
 	node    string
+	freezeSeconds int32
 }
 
 // Metrics is a metrics of a pod at one time point.
@@ -147,7 +148,12 @@ func (pod *Pod) ResourceUsage(clock clock.Clock) v1.ResourceList {
 		return v1.ResourceList{}
 	}
 
-	executedSeconds := int32(pod.executedDuration(clock).Seconds())
+	var executedSeconds int32
+	if pod.freezeSeconds == 0 {
+		executedSeconds = int32(pod.executedDuration(clock).Seconds())
+	} else {
+		executedSeconds = pod.freezeSeconds
+	}
 	for _, phase := range pod.spec {
 		phaseDurationAcc := phase.seconds
 		if executedSeconds <= phaseDurationAcc {
@@ -155,8 +161,12 @@ func (pod *Pod) ResourceUsage(clock clock.Clock) v1.ResourceList {
 		}
 	}
 
-	// log.L.Panic("Unreachable code in pod.ResourceUsage()",executedSeconds,pod.spec)
+	log.L.Panic("Unreachablle code in pod.ResourceUsage()",executedSeconds,pod.spec)
 	return v1.ResourceList{}
+}
+
+func (pod *Pod) FreezeUsage(clock clock.Clock) {
+	pod.freezeSeconds = int32(pod.executedDuration(clock).Seconds())	
 }
 
 func GetPodUsage(spec []specPhase, executedSeconds int32) (v1.ResourceList) {

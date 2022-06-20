@@ -60,10 +60,14 @@ type UpdateEvent struct {
 }
 
 // TerminateSubmitterEvent represents an event of terminating the submission process.
-type TerminateSubmitterEvent struct {
+type TerminateSubmitterEvent struct {}
+
+type FreezeUsageEvent struct {
+	PodKey      string
 }
 
 func (s *SubmitEvent) IsSubmitterEvent() bool             { return true }
 func (d *DeleteEvent) IsSubmitterEvent() bool             { return true }
 func (u *UpdateEvent) IsSubmitterEvent() bool             { return true }
 func (t *TerminateSubmitterEvent) IsSubmitterEvent() bool { return true }
+func (s *FreezeUsageEvent) IsSubmitterEvent() bool        { return true }

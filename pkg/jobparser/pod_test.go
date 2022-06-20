@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
+	"github.com/elchead/k8s-cluster-simulator/pkg/pod"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -30,7 +32,7 @@ func TestPodFactoryWithResources(t *testing.T) {
 
 	podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: time.Now(), Usage: 1e9}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e2}}}
 	podspec := sut.NewWithResources(podmem,"10Gi")
-	assert.Empty(t,podspec.Spec.Containers)
+	assert.NotEmpty(t,podspec.Spec.Containers)
 }
 
 func TestPodSpecFromPodMemory(t *testing.T) {
@@ -114,5 +116,21 @@ func TestSetPodResources(t *testing.T) {
 
 
     }
+
+func TestFreezeUsage(t *testing.T) {
+	factory := PodFactory{SetResources: false}
+	now := time.Now()
+	later := now.Add(2 * time.Minute)
+	podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: now, Usage: 1e9}, {Time: later, Usage: 1e2},{Time: later.Add(2 * time.Minute), Usage: 1}}} // latest spec entry denotes termination time
+	v1Pod := factory.New(podmem)
+
+	clockNow := clock.NewClock(now)
+	simPod, err := pod.NewPod(v1Pod, clockNow, pod.Ok, "node")
+	assert.NoError(t, err)
+	t.Run("usage remains at freezing point even after clock time",func(t *testing.T){
+		simPod.FreezeUsage(clock.NewClock(later))
+		assert.Equal(t,0,resource.NewQuantity(1e2,resource.DecimalSI).Cmp(simPod.ResourceUsage(clock.NewClock(later.Add(1 * time.Minute)))["memory"]))
+	})
+}
 
 

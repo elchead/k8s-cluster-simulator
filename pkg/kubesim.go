@@ -316,6 +316,9 @@ func (k *KubeSim) submit(metrics metrics.Metrics) error {
 				if err != nil {
 					return err
 				}
+			} else if freeze,ok := e.(*submitter.FreezeUsageEvent); ok {
+				k.boundPods[freeze.PodKey].FreezeUsage(k.clock)
+			 
 			} else if del, ok := e.(*submitter.DeleteEvent); ok {
 				log.L.Debugf("Submitter %s: Delete %s",
 					name, util.PodKeyFromNames(del.PodNamespace, del.PodName))
