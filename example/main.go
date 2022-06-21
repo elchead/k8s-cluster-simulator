@@ -78,10 +78,10 @@ var rootCmd = &cobra.Command{
 		}
 		sim,_ := kubesim.NewKubeSim(conf, queue, sched,metricClient)
 		startTime, _ := time.Parse(time.RFC3339, conf.StartClock)
-		endTime := startTime.Add(4 * time.Hour - 1*time.Minute)
+		endTime := startTime.Add(10 * time.Hour + 50*time.Minute)
 
 		
-		file, err := os.Open("./pods.json")
+		file, err := os.Open("./pods_2715.json")
 		if err != nil {
 			log.L.Fatal("Failed to read pod file:", err)
 		}
@@ -134,6 +134,8 @@ func buildScheduler() scheduler.Scheduler {
 
 	// 2. Register plugin(s)
 	// Predicate
+	sched.AddPredicate(predicates.CheckNodeConditionPred,predicates.CheckNodeMemoryPressurePredicate)
+	sched.AddPredicate(predicates.CheckNodeUnschedulablePred,predicates.CheckNodeUnschedulablePredicate)
 	sched.AddPredicate("GeneralPredicates", predicates.GeneralPredicates)
 	// Prioritizer
 	// sched.AddPrioritizer(priorities.PriorityConfig{
