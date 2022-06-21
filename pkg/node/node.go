@@ -53,6 +53,17 @@ func (node *Node) ToV1() *v1.Node {
 	return node.v1
 }
 
+func (node *Node) Unschedulable() {
+	node.v1.Spec.Unschedulable = true
+	node.v1.Spec.Taints = []v1.Taint{
+		{
+			Key:    "node-simulator",
+			Value:  "true",
+			Effect: "NoSchedule",
+		},
+	}
+}
+
 // ToNodeInfo creates *nodeinfo.NodeInfo object from this Node.
 func (node *Node) ToNodeInfo(clock clock.Clock) (*nodeinfo.NodeInfo, error) {
 	pods := node.runningAndTerminatingPodsV1WithStatus(clock)

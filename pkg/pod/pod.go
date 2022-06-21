@@ -161,7 +161,7 @@ func (pod *Pod) ResourceUsage(clock clock.Clock) v1.ResourceList {
 		}
 	}
 
-	log.L.Panic("Unreachablle code in pod.ResourceUsage()",executedSeconds,pod.spec)
+	// log.L.Panic("Unreachablle code in pod.ResourceUsage()",executedSeconds,pod.spec)
 	return v1.ResourceList{}
 }
 
