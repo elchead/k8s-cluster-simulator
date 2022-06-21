@@ -156,7 +156,7 @@ func buildScheduler() scheduler.Scheduler {
 
 func getNodeSize(conf *config.Config) float64 {
 	nodeSzStr := conf.Cluster[0].Status.Allocatable["memory"]
-	nodeSz, err := strconv.ParseFloat(nodeSzStr[:len(nodeSzStr)-2], 64)
+	nodeSz, err := strconv.ParseFloat(nodeSzStr[:len(nodeSzStr)-1], 64)
 	if err != nil {
 		log.L.Fatal("Failed to parse node size:", err)
 	}
