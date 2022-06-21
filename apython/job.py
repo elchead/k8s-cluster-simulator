@@ -107,6 +107,9 @@ class Job:
         count = count_m(name)
         self.name = name[count:]
 
+    def get_node(self, idx):
+        return self.node_order[idx]
+
     def _count_migration(self, count):
         if count > self.nbr_migrations:
             self.nbr_migrations = count

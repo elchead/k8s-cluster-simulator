@@ -6,7 +6,7 @@ from job import *
 def plot_node_usage_with_mig_markers(title, data, zones):
     fig = plt.figure()
     plt.title(title)
-    plt.xlabel("Time")
+    plt.xlabel("Time [min]")
     plt.ylabel("Memory [Gb]")
     rawjobs = get_pod_usage_on_nodes_dict(data)
     color_dict = {"zone2": "b", "zone3": "y", "zone4": "g", "zone5": "r"}

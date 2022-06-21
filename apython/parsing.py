@@ -8,8 +8,12 @@ import copy
 
 
 def get_memory(t, node):
-    z2 = t["Nodes"][node]["TotalResourceUsage"]["memory"]
-    return z2
+    try:
+        z2 = t["Nodes"][node]["TotalResourceUsage"]["memory"]
+        # print(z2)
+        return z2
+    except:
+        return str(0)
 
 
 def get_zone_memory(data, name):

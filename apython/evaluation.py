@@ -117,6 +117,8 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
                 res.job_max_mem[jobname],
                 "#migrations:",
                 job.nbr_migrations,
+                f"from {job.get_node(0)}",
+                f"to {job.get_node(1)}",
                 "migration time [s]:",
                 job.get_migration_time(),
             )
@@ -128,8 +130,8 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
     print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
 
     if plot:
-        # for z in zones:
-        #     axis[z].legend()
+        for z in zones:
+            axis[z].legend()
 
         t = title.replace(" ", "_")
         plt.savefig(f"pod_mem_{t}")
