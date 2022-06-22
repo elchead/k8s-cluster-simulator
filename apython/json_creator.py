@@ -1,9 +1,12 @@
 import json
 
 # import matplotlib.pyplot as plt
-export_filepath = "/Users/I545428/gh/controller-simulator/pods_2715.json"
-import_filepath = "/Users/I545428/gh/controller-simulator/13-6-1630-14-6-300_2715_2m.json"
-entities_path = "/Users/I545428/gh/controller-simulator/entities_2715.json"
+export_filepath = (
+    "/Users/I545428/gh/controller-simulator/pods_760.json"  # "/Users/I545428/gh/controller-simulator/pods_2715.json"
+)
+import_filepath = "/Users/I545428/gh/controller-simulator/9-6-2000-9-6-2300_760.json"
+# import_filepath = "/Users/I545428/gh/controller-simulator/13-6-1630-14-6-300_2715_2m.json"
+entities_path = "/Users/I545428/gh/controller-simulator/entities_9-6-760.json"  # "/Users/I545428/gh/controller-simulator/entities_2715.json"
 id_to_pod = {}
 
 # entities
@@ -50,6 +53,6 @@ with open(import_filepath, "r") as f:
     print("Found", len(pods), "pods")
     with open(export_filepath, "w") as outfile:
         json.dump(pods, outfile)
-# print(not_found_ids)
+print(not_found_ids)
 # plt.plot(v)
 # plt.show()

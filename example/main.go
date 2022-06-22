@@ -43,7 +43,7 @@ func main() {
 
 // configPath is the path of the config file, defaulting to "config".
 const podDataFile = "./pods_760.json"
-const simDuration = 3 * time.Hour + 50*time.Minute
+const simDuration = 5 * time.Hour + 50*time.Minute
 
 var configPath string
 var migPolicy string

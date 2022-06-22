@@ -27,8 +27,11 @@ def evaluate_sim(title, plot, fname, nbr_jobs=50):
     if plot:
         plot_node_usage_with_mig_markers(title, data, zones)
         # plot_node_usage(title, data, zones)
-    with open("mig-sim.log") as f:
-        evaluate_provisions(f)
+    try:
+        with open("mig-sim.log") as f:
+            evaluate_provisions(f)
+    except Exception as e:
+        print("Could not evaluate provisions", e)
 
 
 def evaluate_provisions(f):
