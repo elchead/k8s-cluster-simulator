@@ -2,8 +2,21 @@ import matplotlib.pyplot as plt
 from parsing import *
 from job import *
 from plotting import *
+import re
 
 zones = ["zone2", "zone3", "zone4"]  # zone 5
+
+
+def get_provision_requests(file) -> List[str]:
+    res = []
+    pattern = "fullfill"
+    lines = file.readlines()
+    for line in lines:
+        match = pattern in line  # re.search(pattern, line)
+        if match:
+            str_res = line
+            res.append(str_res)
+    return res
 
 
 def evaluate_sim(title, plot, fname, nbr_jobs=50):
@@ -14,6 +27,15 @@ def evaluate_sim(title, plot, fname, nbr_jobs=50):
     if plot:
         plot_node_usage_with_mig_markers(title, data, zones)
         # plot_node_usage(title, data, zones)
+    with open("mig-sim.log") as f:
+        evaluate_provisions(f)
+
+
+def evaluate_provisions(f):
+    provs = get_provision_requests(f)
+    print("Provision requests:", len(provs))
+    for p in provs:
+        print(p, end="")
 
 
 def load_data(fname):
