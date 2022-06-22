@@ -42,6 +42,9 @@ func main() {
 }
 
 // configPath is the path of the config file, defaulting to "config".
+const podDataFile = "./pods_760.json"
+const simDuration = 3 * time.Hour + 50*time.Minute
+
 var configPath string
 var migPolicy string
 var requestPolicy string
@@ -78,10 +81,10 @@ var rootCmd = &cobra.Command{
 		}
 		sim,_ := kubesim.NewKubeSim(conf, queue, sched,metricClient)
 		startTime, _ := time.Parse(time.RFC3339, conf.StartClock)
-		endTime := startTime.Add(10 * time.Hour + 50*time.Minute)
+		endTime := startTime.Add(simDuration)
 
 		
-		file, err := os.Open("./pods_2715.json")
+		file, err := os.Open(podDataFile)
 		if err != nil {
 			log.L.Fatal("Failed to read pod file:", err)
 		}

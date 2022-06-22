@@ -56,13 +56,23 @@ def plot_node_usage(title, data, zones):
 
 def init_plot_dict(title, zones):
     plots = {}
-    axis = {}
-    fig, axs = plt.subplots(2, len(zones) - 2, sharex=True)
+    axisdict = {}
+
+    fig = None
+    axs = []
+    if len(zones) > 3:
+        fig, axs = plt.subplots(2, len(zones) - 2, sharex=True)
+    else:
+        fig, axs = plt.subplots(1, len(zones), sharex=True)
     fig.suptitle(f"Pod memories ({title})")
 
     fig.text(0.5, 0.04, "Time", ha="center")
     fig.text(0.04, 0.5, "Memory [Gb]", va="center", rotation="vertical")
     for i, z in enumerate(zones):
-        axs[int(i / 2), int(i % 2)].set_title(z)
-        axis[z] = axs[int(i / 2), int(i % 2)]
-    return fig, axis
+        if len(zones) > 3:
+            axs[int(i / 2), int(i % 2)].set_title(z)
+            axisdict[z] = axs[int(i / 2), int(i % 2)]
+        else:
+            axs[i].set_title(z)
+            axisdict[z] = axs[i]
+    return fig, axisdict

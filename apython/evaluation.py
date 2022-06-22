@@ -3,7 +3,7 @@ from parsing import *
 from job import *
 from plotting import *
 
-zones = ["zone2", "zone3", "zone4", "zone5"]
+zones = ["zone2", "zone3", "zone4"]  # zone 5
 
 
 def evaluate_sim(title, plot, fname, nbr_jobs=50):
@@ -118,7 +118,7 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
                 "#migrations:",
                 job.nbr_migrations,
                 f"from {job.get_node(0)}",
-                f"to {job.get_node(1)}",
+                f"to {job.get_node(1)};\t",
                 "migration time [s]:",
                 job.get_migration_time(),
             )
@@ -127,11 +127,12 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
                 axis[zone].plot(
                     poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x"
                 )
+                axis[zone].set_xticks([])
     print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
 
     if plot:
-        for z in zones:
-            axis[z].legend()
+        # for z in zones:
+        #     axis[z].legend()
 
         t = title.replace(" ", "_")
         plt.savefig(f"pod_mem_{t}")
