@@ -27,6 +27,60 @@ func GetMigrationTime(gbSz float64) time.Duration {
 	return time.Duration(math.Ceil(3.3506*gbSz))*time.Second
 }
 
+func NewConcurrentMigrationChecker() *concurrentMigrationChecker {
+	return &concurrentMigrationChecker{make(map[string]time.Duration),make(map[string]clock.Clock)}
+}
+
+type concurrentMigrationChecker struct {
+	migrationDuration map[string]time.Duration
+	migrationStart map[string]clock.Clock
+}
+func (m *concurrentMigrationChecker) StartMigration(t clock.Clock,gbSize float64,pod string) {
+	m.migrationStart[pod] = t
+	m.migrationDuration[pod] = GetMigrationTime(gbSize)
+}
+
+func (m *concurrentMigrationChecker) GetMigrationFinishTime(pod string) clock.Clock {
+	return m.migrationStart[pod].Add(m.migrationDuration[pod])
+} 
+
+func (m *concurrentMigrationChecker) IsReady(current clock.Clock) bool { return true }
+
+func NewMigrationChecker(checkerType string) MigrationCheckerI {
+	switch checkerType {
+	case "blocking":  return NewBlockingMigrationChecker()
+	case "concurrent": return NewConcurrentMigrationChecker()
+	default: 
+		log.L.Warnf("unsupported checker type %v; using blocking type", checkerType) 
+		return &blockingMigrationChecker{MigrationChecker{}}
+	}
+}
+type blockingMigrationChecker struct {
+	adapter MigrationChecker
+}
+
+func NewBlockingMigrationChecker() *blockingMigrationChecker {
+	return &blockingMigrationChecker{MigrationChecker{}}
+}
+
+func (m *blockingMigrationChecker) StartMigration(t clock.Clock,gbSize float64,pod string) {
+	m.adapter.StartMigrationWithSize(t,gbSize)	
+}
+
+func (m *blockingMigrationChecker) GetMigrationFinishTime(pod string) clock.Clock {
+	return m.adapter.GetMigrationFinishTime()
+} 
+
+func (m *blockingMigrationChecker) IsReady(current clock.Clock) bool { return m.adapter.IsReady(current) }
+
+
+type MigrationCheckerI interface {
+	StartMigration(t clock.Clock,gbSize float64,pod string)
+	GetMigrationFinishTime(pod string) clock.Clock
+	IsReady(current clock.Clock) bool
+}
+
+
 type MigrationChecker struct {
 	migrationStart clock.Clock
 	migrationDuration time.Duration
@@ -37,9 +91,9 @@ func (m *MigrationChecker) StartMigration(t clock.Clock) {
 	m.migrationDuration = MigrationTime
 }
 
-func (m *MigrationChecker) StartMigrationWithSize(t clock.Clock,size float64)  {
+func (m *MigrationChecker) StartMigrationWithSize(t clock.Clock,gbSize float64)  {
 	m.migrationStart = t
-	m.migrationDuration = GetMigrationTime(size)
+	m.migrationDuration = GetMigrationTime(gbSize)
 }
 
 func (m *MigrationChecker) GetMigrationFinishTime() clock.Clock {
@@ -53,7 +107,7 @@ type MigrationSubmitter struct {
 	jobs []jobparser.PodMemory
 	queue jobparser.Iterator
 	endTime clock.Clock
-	checker MigrationChecker
+	checker MigrationCheckerI
 	factory jobparser.PodFactory
 }
 
@@ -121,9 +175,11 @@ func (m *MigrationSubmitter) startMigrations(migrations []migration.MigrationCmd
 		job.Name = jobName
 		job.IsMigrating = true
 
-		m.checker.StartMigration(currentTime)
-		jobparser.UpdateJobForMigration(job, m.checker.GetMigrationFinishTime().ToMetaV1().Time)
-		log.L.Debug("push to queue:", job.Name)
+		podsize := cmd.Usage
+		m.checker.StartMigration(currentTime,podsize,jobName)
+		finishTime :=  m.checker.GetMigrationFinishTime(jobName).ToMetaV1().Time
+		jobparser.UpdateJobForMigration(job,finishTime)
+		log.L.Debug("push migration to queue:", job.Name, " size ",podsize, " finishing at ", finishTime)
 		m.queue.Push(*job)
 	}
 	return nil
@@ -141,7 +197,7 @@ func NewSubmitterWithJobsWithEndTime(controller ControllerI,jobs []jobparser.Pod
 	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime)}
 }
 
-func NewSubmitterWithJobsWithEndTimeFactory(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time,factory jobparser.PodFactory) *MigrationSubmitter {
-	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime),factory: factory}
+func NewSubmitterWithJobsWithEndTimeFactory(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time,factory jobparser.PodFactory,checker MigrationCheckerI) *MigrationSubmitter {
+	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime),factory: factory,checker: checker}
 }
 

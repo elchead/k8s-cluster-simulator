@@ -46,6 +46,7 @@ const podDataFile = "./pods_760.json"
 const simDuration = 5 * time.Hour + 50*time.Minute
 
 var configPath string
+var checkerType string
 var migPolicy string
 var requestPolicy string
 var useMigrator bool
@@ -53,6 +54,7 @@ var nodeFreeThreshold float64
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "config", "config file (excluding file extension)")
+	rootCmd.PersistentFlags().StringVar(&checkerType, "checker", "blocking", "blocking or concurrent")
 	rootCmd.PersistentFlags().StringVar(&migPolicy, "migPolicy", "optimal", "Migration choice policy: optimal,max,big-enough")
 	rootCmd.PersistentFlags().StringVar(&requestPolicy, "reqPolicy", "threshold", "Policy to request memory freeing: threshold,slope")
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
@@ -105,7 +107,8 @@ var rootCmd = &cobra.Command{
 			requestPolicy := monitoring.NewRequestPolicy(requestPolicy, cluster, metricClient,nodeFreeThreshold)
 			migrationPolicy := monitoring.NewMigrationPolicy(migPolicy,cluster,metricClient)
 			migController := monitoring.NewController(requestPolicy, migrationPolicy)
-			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory))
+			checker := migration.NewMigrationChecker(checkerType)
+			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory,checker))
 		}
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
 		// 3. Run the main loop of KubeSim.

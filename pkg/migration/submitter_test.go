@@ -139,12 +139,12 @@ func TestMigrationSuite(t *testing.T) {
 	suite.Run(t, new(MigrationSuite))
 }
 
+
 func assertNoPodEvent(t *testing.T, events []submitter.Event) {
 	for _,event := range events {
 		assert.IsType(t, &submitter.FreezeUsageEvent{}, event)
 	}
 }
-
 
 func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *migration.MigrationSubmitter, migratedPodName string) []submitter.Event {
 	afterMigration := submissionTime.Add(migration.MigrationTime)
@@ -187,6 +187,15 @@ func TestCheckerMigrationProcess(t *testing.T) {
 	t.Run("ready after backoff", func(t *testing.T){
 		assert.True(t,sut.IsReady(clockNow.Add(migration.MigrationTime + migration.BackoffInterval)))
 	})
+}
+
+func TestCheckerConcurrentMigration(t *testing.T) {
+	sut := migration.NewConcurrentMigrationChecker()
+	now := clock.NewClock(time.Now())
+	sut.StartMigration(now,10.,"pod1")
+	assert.True(t,sut.IsReady(now.Add(1* time.Second)))
+	sut.StartMigration(now,20.,"pod2")
+	assert.NotEqual(t,sut.GetMigrationFinishTime("pod2"),sut.GetMigrationFinishTime("pod1"))
 }
 
 func TestGetMigrationTime(t *testing.T) {
