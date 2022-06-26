@@ -34,6 +34,7 @@ import (
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/priorities"
 )
 func main() {
 	if err := rootCmd.Execute(); err != nil {
@@ -54,7 +55,7 @@ var nodeFreeThreshold float64
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "config", "config file (excluding file extension)")
-	rootCmd.PersistentFlags().StringVar(&checkerType, "checker", "blocking", "blocking or concurrent")
+	rootCmd.PersistentFlags().StringVar(&checkerType, "checker", "concurrent", "blocking or concurrent")
 	rootCmd.PersistentFlags().StringVar(&migPolicy, "migPolicy", "optimal", "Migration choice policy: optimal,max,big-enough")
 	rootCmd.PersistentFlags().StringVar(&requestPolicy, "reqPolicy", "threshold", "Policy to request memory freeing: threshold,slope")
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
@@ -140,22 +141,23 @@ func buildScheduler() scheduler.Scheduler {
 
 	// 2. Register plugin(s)
 	// Predicate
-	sched.AddPredicate(predicates.CheckNodeConditionPred,predicates.CheckNodeMemoryPressurePredicate)
+	sched.AddPredicate(predicates.CheckNodeConditionPred,predicates.CheckNodeMemoryPressurePredicate) // not used 
 	sched.AddPredicate(predicates.CheckNodeUnschedulablePred,predicates.CheckNodeUnschedulablePredicate)
 	sched.AddPredicate("GeneralPredicates", predicates.GeneralPredicates)
+	// sched.AddPrioritizer()
 	// Prioritizer
-	// sched.AddPrioritizer(priorities.PriorityConfig{
-	// 	Name:   "BalancedResourceAllocation",
-	// 	Map:    priorities.BalancedResourceAllocationMap,
-	// 	Reduce: nil,
-	// 	Weight: 1,
-	// })
-	// sched.AddPrioritizer(priorities.PriorityConfig{
-	// 	Name:   "LeastRequested",
-	// 	Map:    priorities.LeastRequestedPriorityMap,
-	// 	Reduce: nil,
-	// 	Weight: 1,
-	// })
+	sched.AddPrioritizer(priorities.PriorityConfig{
+		Name:   "BalancedResourceAllocation",
+		Map:    priorities.BalancedResourceAllocationMap,
+		Reduce: nil,
+		Weight: 1,
+	})
+	sched.AddPrioritizer(priorities.PriorityConfig{
+		Name:   "LeastRequested",
+		Map:    priorities.LeastRequestedPriorityMap,
+		Reduce: nil,
+		Weight: 1,
+	})
 
 	return &sched
 }
