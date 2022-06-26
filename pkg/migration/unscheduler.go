@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"github.com/containerd/containerd/log"
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-cluster-simulator/pkg/metrics"
 	"github.com/elchead/k8s-cluster-simulator/pkg/node"
@@ -21,18 +22,23 @@ func (unsched *Unscheduler) Submit(
 	nodeLister algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error){
 		nodes,_ := nodeLister.List()
-		// if node metric usage percentage is >80 -> set node to unschedulable
 		for name,node := range met[metrics.NodesMetricsKey].(map[string]node.Metrics) {
 			usage :=  float64(node.TotalResourceUsage.Memory().ScaledValue(resource.Giga))
 			alloc := float64(node.Allocatable.Memory().ScaledValue(resource.Giga))
 			usedDecimal := usage / alloc
 			if usedDecimal> unsched.ThresholdDecimal {
 				if res := GetNodeWithName(name,nodes); res != nil {
-					res.Spec.Unschedulable = true
+					if !res.Spec.Unschedulable {
+						res.Spec.Unschedulable = true
+						log.L.Debugf("Node %s  (used decimal: %d ) is set to unschedulable",name,usedDecimal)
+					}
 				}			
 			} else if usedDecimal<= unsched.ThresholdDecimal - unsched.ReschedulableDistanceDecimal {
 				if res := GetNodeWithName(name,nodes); res != nil {
-					res.Spec.Unschedulable = false
+					if res.Spec.Unschedulable {
+						log.L.Debugf("Node %s (used decimal: %d ) is set to schedulable again",name,usedDecimal)
+						res.Spec.Unschedulable = false
+					}
 				}
 			}
 		}
