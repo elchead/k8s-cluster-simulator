@@ -90,7 +90,7 @@ func TestUpdateMetrics(t *testing.T) {
 	sut := migration.NewClient()
 	
 	t.Run("get free memory percentage of specfic node",func(t *testing.T) {
-		nodemetric := createNodeMetrics(500,5)
+		nodemetric := createNodeMetric(500,5)
 		metrics := map[string]node.Metrics{"zone2": nodemetric}
 		sut.UpdateNodeMetrics(metrics)
 		free,err :=sut.GetFreeMemoryNode("zone2")
@@ -104,7 +104,7 @@ func TestUpdateMetrics(t *testing.T) {
 		})
 	})
 	t.Run("get free memory of all nodes", func(t *testing.T) {
-		metrics := map[string]node.Metrics{"zone2": createNodeMetrics(500,5),"zone3": createNodeMetrics(500,10)}
+		metrics := map[string]node.Metrics{"zone2": createNodeMetric(500,5),"zone3": createNodeMetric(500,10)}
 		sut.UpdateNodeMetrics(metrics)
 		free,err :=sut.GetFreeMemoryOfNodes()
 		assert.NoError(t, err)
@@ -112,7 +112,7 @@ func TestUpdateMetrics(t *testing.T) {
 
 	})
 	t.Run("delete old metrics upon update", func(t *testing.T) {
-		metrics := map[string]node.Metrics{"zone3": createNodeMetrics(400,10)}
+		metrics := map[string]node.Metrics{"zone3": createNodeMetric(400,10)}
 		sut.UpdateNodeMetrics(metrics)
 		free,_ :=sut.GetFreeMemoryOfNodes()
 		assert.Equal(t,monitoring.NodeFreeMemMap{"zone3":97.5},free)
@@ -160,13 +160,13 @@ func TestGetPodMemories(t *testing.T) {
 
 }
 
-func createNodeMetrics(total,used int64) node.Metrics {
+func createNodeMetric(total,used int64) node.Metrics {
 	return node.Metrics{Allocatable: createMemoryResource(total),TotalResourceUsage:createMemoryResource(used)}
 
 }
 
-func createMemoryResource(quantity int64) v1.ResourceList {
-	return v1.ResourceList{"memory": *resource.NewScaledQuantity(quantity,resource.Giga),}	
+func createMemoryResource(quantityGb int64) v1.ResourceList {
+	return v1.ResourceList{"memory": *resource.NewScaledQuantity(quantityGb,resource.Giga),}	
 }
 
 func newNode(name, memCapacity string) (node.Node,error) {
