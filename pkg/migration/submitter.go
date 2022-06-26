@@ -28,20 +28,31 @@ func GetMigrationTime(gbSz float64) time.Duration {
 }
 
 func NewConcurrentMigrationChecker() *concurrentMigrationChecker {
-	return &concurrentMigrationChecker{make(map[string]time.Duration),make(map[string]clock.Clock)}
+	return &concurrentMigrationChecker{make(map[string]clock.Clock),make(map[string]clock.Clock),nil}
 }
 
 type concurrentMigrationChecker struct {
-	migrationDuration map[string]time.Duration
+	migrationFinish map[string]clock.Clock
 	migrationStart map[string]clock.Clock
+	latestFinish *clock.Clock
 }
 func (m *concurrentMigrationChecker) StartMigration(t clock.Clock,gbSize float64,pod string) {
 	m.migrationStart[pod] = t
-	m.migrationDuration[pod] = GetMigrationTime(gbSize)
+	m.migrationFinish[pod] = m.getLastMigrationFinishTime(gbSize)
+}
+
+func (m *concurrentMigrationChecker) getLastMigrationFinishTime(gbSize float64) clock.Clock {
+	if m.latestFinish == nil {
+		t :=  clock.NewClock(time.Now())
+		m.latestFinish = &t
+	}
+	res := m.latestFinish.Add(GetMigrationTime(gbSize))
+	m.latestFinish = &res
+	return res
 }
 
 func (m *concurrentMigrationChecker) GetMigrationFinishTime(pod string) clock.Clock {
-	return m.migrationStart[pod].Add(m.migrationDuration[pod])
+	return m.migrationFinish[pod]
 } 
 
 func (m *concurrentMigrationChecker) IsReady(current clock.Clock) bool { return true }
