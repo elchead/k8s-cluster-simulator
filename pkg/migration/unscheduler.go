@@ -10,10 +10,12 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/algorithm"
 )
 
-type Unscheduler struct {}
+type Unscheduler struct {
+	EndTime clock.Clock
+}
 
 func (unsched *Unscheduler) Submit(
-	clock clock.Clock,
+	currentTime clock.Clock,
 	nodeLister algorithm.NodeLister,
 	met metrics.Metrics) ([]submitter.Event, error){
 		nodes,_ := nodeLister.List()
@@ -26,6 +28,12 @@ func (unsched *Unscheduler) Submit(
 					res.Spec.Unschedulable = true
 				}			
 			}
+		}
+
+
+		isSimulationFinished :=unsched.EndTime.BeforeOrEqual(currentTime)
+		if isSimulationFinished {
+			return []submitter.Event{&submitter.TerminateSubmitterEvent{}},nil
 		}
 		return nil, nil
 	}

@@ -14,13 +14,14 @@ import (
 )
 
 func TestUnscheduleWhenNodeFull(t *testing.T) {
-	sut := migration.Unscheduler{}
+	c := clock.NewClock(time.Now())
+	sut := migration.Unscheduler{EndTime:c.Add(5* time.Minute)}
 	
 	nodes := []*v1.Node{{ObjectMeta:metav1.ObjectMeta{Name:"zone3"},Spec:  v1.NodeSpec{Unschedulable: false}},{ObjectMeta:metav1.ObjectMeta{Name:"zone2"},Spec:  v1.NodeSpec{Unschedulable: false}}}
 	fakeSim := FakeSimulator{nodes}
 
 	met := createNodeMetrics(100.,map[string]int64{"zone3":10,"zone2":85})
-	c := clock.NewClock(time.Now())
+	
 	sut.Submit(c,fakeSim,met)
 	t.Run("node with usage > 80% is set unschedulable",func(t *testing.T) {
 		assert.True(t,migration.GetNodeWithName("zone2",nodes).Spec.Unschedulable)
