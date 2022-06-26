@@ -12,6 +12,8 @@ import (
 
 type Unscheduler struct {
 	EndTime clock.Clock
+	ThresholdDecimal float64
+	ReschedulableDistanceDecimal float64 // condition to set unschedulable node to schedulable when decimal distance to the threshold is bigger or equal to ReschedulableDistanceDecimal
 }
 
 func (unsched *Unscheduler) Submit(
@@ -21,12 +23,17 @@ func (unsched *Unscheduler) Submit(
 		nodes,_ := nodeLister.List()
 		// if node metric usage percentage is >80 -> set node to unschedulable
 		for name,node := range met[metrics.NodesMetricsKey].(map[string]node.Metrics) {
-			usage := node.TotalResourceUsage.Memory().ScaledValue(resource.Giga)
-			alloc := node.Allocatable.Memory().ScaledValue(resource.Giga)
-			if float64(usage) / float64(alloc) > .8 {
+			usage :=  float64(node.TotalResourceUsage.Memory().ScaledValue(resource.Giga))
+			alloc := float64(node.Allocatable.Memory().ScaledValue(resource.Giga))
+			usedDecimal := usage / alloc
+			if usedDecimal> unsched.ThresholdDecimal {
 				if res := GetNodeWithName(name,nodes); res != nil {
 					res.Spec.Unschedulable = true
 				}			
+			} else if usedDecimal<= unsched.ThresholdDecimal - unsched.ReschedulableDistanceDecimal {
+				if res := GetNodeWithName(name,nodes); res != nil {
+					res.Spec.Unschedulable = false
+				}
 			}
 		}
 

@@ -15,7 +15,7 @@ import (
 
 func TestUnscheduleWhenNodeFull(t *testing.T) {
 	c := clock.NewClock(time.Now())
-	sut := migration.Unscheduler{EndTime:c.Add(5* time.Minute)}
+	sut := migration.Unscheduler{EndTime:c.Add(5* time.Minute),ThresholdDecimal: .8,ReschedulableDistanceDecimal:.15}
 	
 	nodes := []*v1.Node{{ObjectMeta:metav1.ObjectMeta{Name:"zone3"},Spec:  v1.NodeSpec{Unschedulable: false}},{ObjectMeta:metav1.ObjectMeta{Name:"zone2"},Spec:  v1.NodeSpec{Unschedulable: false}}}
 	fakeSim := FakeSimulator{nodes}
@@ -23,12 +23,18 @@ func TestUnscheduleWhenNodeFull(t *testing.T) {
 	met := createNodeMetrics(100.,map[string]int64{"zone3":10,"zone2":85})
 	
 	sut.Submit(c,fakeSim,met)
-	t.Run("node with usage > 80% is set unschedulable",func(t *testing.T) {
-		assert.True(t,migration.GetNodeWithName("zone2",nodes).Spec.Unschedulable)
-	})
 	t.Run("node with usage < 80% remains schedulable", func(t *testing.T) {
 		assert.False(t,migration.GetNodeWithName("zone3",nodes).Spec.Unschedulable)
 	})
+	t.Run("node zone2 with usage > 80% is set unschedulable",func(t *testing.T) {
+		assert.True(t,migration.GetNodeWithName("zone2",nodes).Spec.Unschedulable)
+	})
+	t.Run("zone2 is set to schedulable again when 15 % away from threshold",func(t *testing.T) {
+		met = createNodeMetrics(100.,map[string]int64{"zone3":10,"zone2":64})
+		sut.Submit(c.Add(5* time.Minute),fakeSim,met)
+		assert.False(t,migration.GetNodeWithName("zone2",nodes).Spec.Unschedulable)
+	})
+
 }
 
 func createNodeMetrics(nodeCapacity int64, nodeUsage map[string]int64) map[string]interface{} {
