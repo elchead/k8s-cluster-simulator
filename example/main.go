@@ -24,6 +24,7 @@ import (
 
 	"github.com/containerd/containerd/log"
 	kubesim "github.com/elchead/k8s-cluster-simulator/pkg"
+	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-cluster-simulator/pkg/config"
 	"github.com/elchead/k8s-cluster-simulator/pkg/jobparser"
 	"github.com/elchead/k8s-cluster-simulator/pkg/migration"
@@ -103,13 +104,17 @@ var rootCmd = &cobra.Command{
 		submitter := jobparser.NewJobSubmitterWithFactory(jobs,podFactory)
 		sim.AddSubmitter("JobSubmitter", submitter)
 		if useMigrator {
-			log.L.Info("Setting migration threshold:",nodeFreeThreshold)
+			log.L.Info("Setting migration threshold:",nodeFreeThreshold, "% ",  nodeFreeThreshold/100.)
 			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
 			requestPolicy := monitoring.NewRequestPolicy(requestPolicy, cluster, metricClient,nodeFreeThreshold)
 			migrationPolicy := monitoring.NewMigrationPolicy(migPolicy,cluster,metricClient)
 			migController := monitoring.NewController(requestPolicy, migrationPolicy)
 			checker := migration.NewMigrationChecker(checkerType)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory,checker))
+
+
+			unscheduler := &migration.Unscheduler{EndTime:clock.NewClock(endTime),ThresholdDecimal: 1. - nodeFreeThreshold/100.,ReschedulableDistanceDecimal:.15}
+			sim.AddSubmitter("NodeUnscheduler", unscheduler)
 		}
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
 		// 3. Run the main loop of KubeSim.

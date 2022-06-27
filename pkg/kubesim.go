@@ -25,6 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/scheduler/nodeinfo"
 
@@ -318,6 +319,8 @@ func (k *KubeSim) submit(metrics metrics.Metrics) error {
 				}
 			} else if freeze,ok := e.(*submitter.FreezeUsageEvent); ok {
 				k.boundPods[freeze.PodKey].FreezeUsage(k.clock)
+				usage := k.boundPods[freeze.PodKey].ResourceUsage(k.clock)
+				log.L.Debugf("Freezing usage of  %s at %dMB", freeze.PodKey,usage.Memory().ScaledValue(resource.Mega))
 			 
 			} else if del, ok := e.(*submitter.DeleteEvent); ok {
 				log.L.Debugf("Submitter %s: Delete %s",

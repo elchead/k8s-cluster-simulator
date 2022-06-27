@@ -245,6 +245,5 @@ func (node *Node) totalResourceUsage(clock clock.Clock) v1.ResourceList {
 			total = util.ResourceListSum(total, pod.ResourceUsage(clock))
 		}
 	}
-
 	return total
 }

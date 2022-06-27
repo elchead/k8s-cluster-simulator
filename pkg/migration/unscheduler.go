@@ -30,13 +30,13 @@ func (unsched *Unscheduler) Submit(
 				if res := GetNodeWithName(name,nodes); res != nil {
 					if !res.Spec.Unschedulable {
 						res.Spec.Unschedulable = true
-						log.L.Debugf("Node %s  (used decimal: %d ) is set to unschedulable",name,usedDecimal)
+						log.L.Debugf("Node %s  (used decimal: %f ) is set to unschedulable",name,usedDecimal)
 					}
 				}			
 			} else if usedDecimal<= unsched.ThresholdDecimal - unsched.ReschedulableDistanceDecimal {
 				if res := GetNodeWithName(name,nodes); res != nil {
 					if res.Spec.Unschedulable {
-						log.L.Debugf("Node %s (used decimal: %d ) is set to schedulable again",name,usedDecimal)
+						log.L.Debugf("Node %s (used decimal: %f ) is set to schedulable again",name,usedDecimal)
 						res.Spec.Unschedulable = false
 					}
 				}
