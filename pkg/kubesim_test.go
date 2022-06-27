@@ -63,7 +63,7 @@ func TestSimFreeze(t *testing.T) {
 	sim.AddSubmitter("TestSubmitter", s)
 	sim.Run(context.TODO())
 	// sim.BuildMetrics()
-	assert.True(t,false)
+	// assert.True(t,false)
 }
 
 type TestSubmitter struct {

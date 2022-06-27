@@ -25,7 +25,7 @@ import (
 )
 
 type Iterator struct {
-	jobs    []PodMemory
+	jobs    []*PodMemory
 	current int
 }
 
@@ -34,11 +34,11 @@ func (it *Iterator) RemainingValues() int {
 }
 
 func (it *Iterator) Value() PodMemory {
-	return it.jobs[it.current]
+	return *it.jobs[it.current]
 }
 
 
-func (it *Iterator) Push(job PodMemory) {
+func (it *Iterator) Push(job *PodMemory) {
 	it.jobs = append(it.jobs, job)
 }
 
@@ -61,7 +61,11 @@ func (it *Iterator) ExistNext() bool {
 }
 
 func NewIterator(jobs []PodMemory) *Iterator {
-	return &Iterator{jobs, 0}
+	var newJobs []*PodMemory
+	for i, _ := range jobs {
+		newJobs = append(newJobs, &jobs[i])
+	}
+	return &Iterator{newJobs, 0}
 }
 
 type JobSubmitter struct {

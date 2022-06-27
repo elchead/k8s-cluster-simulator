@@ -32,8 +32,8 @@ func (suite *MigrationSuite) SetupTest() {
 
 func (suite *MigrationSuite) TestMigrateMultipleJobs() {
 	controllerStub := new(ControllerStub)
-	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil).Once()
-	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j1",Usage:1e9}}, nil).Once()
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:30}}, nil).Once() // 10GB
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j1",Usage:30}}, nil).Once()
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{}, nil).Once()
 
 	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,suite.jobs,endTime) 
@@ -44,13 +44,13 @@ func (suite *MigrationSuite) TestMigrateMultipleJobs() {
 	})
 	suite.Run("do not call migration controller while migration in progress", func(){
 		sut.Submit(clockNow, nil, nil)
-		sut.Submit(clockNow.Add(2*time.Second), nil, nil)
+		sut.Submit(clockNow.Add(1*time.Second), nil, nil)
 		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations", 1)	
 	})
 	
 	suite.Run("migration pod is issued after migration time", func() {
 		assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mj2")
-		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations", 1)
+		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations", 2)
 	})
 	
 	suite.Run("call migration controller again after migration + backoff and migrate new job", func() {
@@ -62,7 +62,8 @@ func (suite *MigrationSuite) TestMigrateMultipleJobs() {
 }
 func (suite *MigrationSuite) TestMigrateMigratedJob() {
 	controllerStub := new(ControllerStub)
-	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/mj2",Usage:1e9}}, nil)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/mj2",Usage:20}}, nil).Once()
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{}, nil).Once()
 
 	mjobs := suite.jobs
 	mjobs[1].Name = "mj2"
@@ -75,25 +76,27 @@ func (suite *MigrationSuite) TestMigrateMigratedJob() {
 
 func (suite *MigrationSuite) TestBackoffIntervalAfterMigration() {
 	controllerStub := new(ControllerStub)
-	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:10}}, nil).Once()
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{}, nil)
 
 	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,suite.jobs,endTime) 
 	sut.Submit(clockNow,nil, nil)
 	controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",1)
 
 	assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mj2")
-	controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",1)
+	controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",2)
 
 	suite.Run("do not call controller before backoff interval", func(){
-		beforeBackOff := clockNow.Add(migration.MigrationTime + 20 * time.Second)
+		migrationTime := migration.GetMigrationTime(10)
+		beforeBackOff := clockNow.Add(migrationTime + 20 * time.Second)
 		sut.Submit(beforeBackOff,nil, nil)	
-		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",1)
+		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",2)
 	})
 
 	suite.Run("call controller after backoff", func(){
 		afterBackOff := clockNow.Add(migration.MigrationTime + migration.BackoffInterval)
 		sut.Submit(afterBackOff,nil, nil)	
-		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",2)	
+		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",3)	
 	})
 
 }
@@ -110,16 +113,17 @@ func (suite *MigrationSuite) TestTerminateSubmitterAtEndTime() {
 
 func (suite *MigrationSuite) TestAfterMigration() {
 	controllerStub := new(ControllerStub)
-	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:1e9}}, nil)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:10}}, nil).Once()
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{}, nil).Once()	
 
 	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,suite.jobs,endTime)
-	sut.Submit(clockNow, nil, nil)
+	ev,_ := sut.Submit(clockNow, nil, nil)
+	assertNoPodEvent(suite.T(), ev)
+	suite.Run("delete old pod", func(){
+		assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mj2")
+	})
 	suite.Run("update job name in shared slice to migration pod", func(){
 		assert.Equal(suite.T(),"mj2",suite.jobs[1].Name)
-	})
-	suite.Run("delete old pod", func(){
-		events := assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mj2")
-		assertDeleteEvent(suite.T(),events[1],"j2")
 	})
 }
 
@@ -150,21 +154,23 @@ func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *m
 	afterMigration := submissionTime.Add(migration.MigrationTime)
 	events, err := sut.Submit(afterMigration, nil, nil)
 	assert.NoError(t, err)
-	assertSubmitEvent(t, events[0], migratedPodName)
+	assertContainsDeleteOldPodEvent(t, events, migratedPodName)
 	return events
 }
 
 func assertDeleteEvent(t testing.TB, event submitter.Event, podName string) {
-	delete, ok := event.(*submitter.DeleteEvent)
-	assert.True(t, ok)
-	assert.Equal(t, podName, delete.PodName)
+	assert.IsType(t,&submitter.DeleteEvent{},event)
+	// assert.Equal(t, podName, delete.PodName)
 }
 
 
 func assertSubmitEvent(t testing.TB, event submitter.Event, podName string) {
-	submit, ok := event.(*submitter.SubmitEvent)
-	assert.True(t, ok)
-	assert.Equal(t, podName, submit.Pod.ObjectMeta.Name)
+	assert.IsType(t,&submitter.SubmitEvent{},event)
+	assert.Equal(t, podName, event.(*submitter.SubmitEvent).Pod.ObjectMeta.Name)
+}
+
+func assertContainsDeleteOldPodEvent(t testing.TB, events []submitter.Event, podName string) {
+	assert.Contains(t,events,&submitter.DeleteEvent{PodName:podName[1:],PodNamespace:"default"})
 }
 type ControllerStub struct {
 	mock.Mock

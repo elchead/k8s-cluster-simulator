@@ -29,8 +29,8 @@ func (f PodFactory)  New(podinfo PodMemory) *v1.Pod {
 }
 
 func (f PodFactory)  NewMigratedPod(podinfo PodMemory) *v1.Pod {
-	// todo set parameter for increase
-	return f.NewWithResources(podinfo,fmt.Sprintf(`%f`,1.2 *podinfo.Records[0].Usage))
+	// TODO set parameter for increase
+	return f.NewWithResources(podinfo,fmt.Sprintf(`%f`,1. *podinfo.Records[0].Usage))
 }
 
 func (f PodFactory)  NewWithResources(podinfo PodMemory,memSize string) *v1.Pod {
@@ -80,12 +80,6 @@ func UpdateJobForMigration(podinfo *PodMemory, migration time.Time) {
 
 func UpdateJobNameForMigration(podinfo *PodMemory) {
 	podinfo.Name = "m" + podinfo.Name
-}
-
-
-func MigratePod(job PodMemory,migration time.Time) *v1.Pod {
-	UpdateJobForMigration(&job,migration)
-	return CreatePodWithoutResources(job)
 }
 
 func GetJobSizeFromName(name string) (string, error) {

@@ -53,16 +53,6 @@ func TestAssignResourcesFromPodName(t *testing.T) {
 	podspec := CreatePod(podmem)
 	assert.Equal(t,GetJobResources("m"),podspec.Spec.Containers[0].Resources)
 }
-
-func TestMigrationPod(t *testing.T) {
-	now := time.Now()
-	podmem := PodMemory{Name: "w1", Records: []Record{{Time: now, Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 1},{Time: now.Add(4 * time.Minute), Usage: 1e2}}}
-	migrationTime := now.Add(3 * time.Minute)
-	podspec := MigratePod(podmem,migrationTime)
-	assert.Equal(t, "mw1", podspec.Name)
-	assert.Equal(t, "\n- seconds: 0.000000\n  resourceUsage:\n    cpu: 8\n    memory: 1.000000\n\n- seconds: 60.000000\n  resourceUsage:\n    cpu: 8\n    memory: 100.000000\n", podspec.Annotations["simSpec"])
-}
-
 func TestFilterRecords(t *testing.T) {
 	now := time.Now()
 	records := []Record{{Time:now,  Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 1e2},{Time: now.Add(4 * time.Minute), Usage: 1e3},{Time: now.Add(6 * time.Minute), Usage: 1e4}}

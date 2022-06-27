@@ -14,6 +14,7 @@ import (
 	"github.com/elchead/k8s-cluster-simulator/pkg/submitter"
 	"github.com/elchead/k8s-cluster-simulator/pkg/util"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
+	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"k8s.io/kubernetes/pkg/scheduler/algorithm"
 )
 
@@ -123,12 +124,14 @@ func (m *MigrationChecker) GetMigrationFinishTime() clock.Clock {
 
 func (m *MigrationChecker) IsReady(current clock.Clock) bool { return m.GetMigrationFinishTime().Add(BackoffInterval).BeforeOrEqual(current) } 
 
+
+
 type MigrationSubmitter struct {
 	controller ControllerI
 	jobs []jobparser.PodMemory
 	queue jobparser.Iterator
 	endTime clock.Clock
-	checker MigrationCheckerI
+	checker monitoring.MigrationCheckerI
 	factory jobparser.PodFactory
 }
 
@@ -138,6 +141,7 @@ func (m *MigrationSubmitter) Submit(
 	met metrics.Metrics) ([]submitter.Event, error) {
 	var freezevents []submitter.Event
 	if m.checker.IsReady(currentTime) {
+		// log.L.Infof("migration checker is ready")
 		migrations, err := m.controller.GetMigrations()
 		if err != nil {
 			return []submitter.Event{}, errors.Wrap(err, "migrator failed")
@@ -155,7 +159,6 @@ func (m *MigrationSubmitter) Submit(
 	}
 	migevents := m.getEventsFromMigrations(currentTime)
 	events := append(freezevents, migevents...)
-	
 	// terminate
 	isSimulationFinished := m.endTime.BeforeOrEqual(currentTime)
 	if isSimulationFinished {
@@ -170,13 +173,14 @@ func (m *MigrationSubmitter) getEventsFromMigrations(currentTime clock.Clock) []
 		nextJob := m.queue.Value()
 		jobTime := clock.NewClock(nextJob.StartAt)
 		if jobTime.BeforeOrEqual(currentTime) {
-			log.L.Debug("pop from queue:", nextJob.Name)
-			jobparser.UpdateJobNameForMigration(&nextJob)
+			log.L.Info("pop from queue:", nextJob.Name)
+			job := jobparser.GetJob(nextJob.Name, m.jobs) // jobs are copied in iterator.. need original reference for communication with job deleter
+			jobparser.UpdateJobNameForMigration(job) // update global job reference name only when migration is finished
 			pod := m.factory.NewMigratedPod(nextJob)
 			nextJob.IsMigrating = false
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
 
-			oldPod := util.GetOldPodName(pod.Name)
+			oldPod := pod.Name
 			events = append(events, &submitter.DeleteEvent{PodNamespace: "default", PodName: oldPod})
 
 			m.queue.Next()
@@ -197,12 +201,12 @@ func (m *MigrationSubmitter) startMigrations(migrations []migration.MigrationCmd
 		job.Name = jobName
 		job.IsMigrating = true
 
-		podsize := cmd.Usage
+		podsize := cmd.Usage // GB
 		m.checker.StartMigration(currentTime,podsize,jobName)
 		finishTime :=  m.checker.GetMigrationFinishTime(jobName).ToMetaV1().Time
 		jobparser.UpdateJobForMigration(job,finishTime)
 		log.L.Debug("push migration to queue:", job.Name, " size ",podsize, " finishing at ", finishTime)
-		m.queue.Push(*job)
+		m.queue.Push(job)
 	}
 	return nil
 }
@@ -216,10 +220,10 @@ func NewSubmitterWithJobs(controller ControllerI,jobs []jobparser.PodMemory) *Mi
 }
 
 func NewSubmitterWithJobsWithEndTime(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time) *MigrationSubmitter {
-	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime)}
+	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime),factory: jobparser.PodFactory{SetResources:false},checker: NewBlockingMigrationChecker()}
 }
 
-func NewSubmitterWithJobsWithEndTimeFactory(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time,factory jobparser.PodFactory,checker MigrationCheckerI) *MigrationSubmitter {
+func NewSubmitterWithJobsWithEndTimeFactory(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time,factory jobparser.PodFactory,checker monitoring.MigrationCheckerI) *MigrationSubmitter {
 	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime),factory: factory,checker: checker}
 }
 
