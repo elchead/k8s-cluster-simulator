@@ -33,6 +33,13 @@ func (f PodFactory)  NewMigratedPod(podinfo PodMemory) *v1.Pod {
 	return f.NewWithResources(podinfo,fmt.Sprintf(`%f`,1. *podinfo.Records[0].Usage))
 }
 
+func (f PodFactory)  NewMigratedPodToNode(podinfo PodMemory) *v1.Pod {
+	res := f.NewMigratedPod(podinfo)
+	res.Spec.NodeName = podinfo.IsMigratingToNode
+	return res
+
+}
+
 func (f PodFactory)  NewWithResources(podinfo PodMemory,memSize string) *v1.Pod {
 	pod := CreatePodWithoutResources(podinfo)
 	pod.Spec = v1.PodSpec{

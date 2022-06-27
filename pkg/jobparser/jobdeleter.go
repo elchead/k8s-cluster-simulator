@@ -41,7 +41,7 @@ func (s *JobDeleter) Submit(
 	events := make([]submitter.Event, 0, len(s.jobs))
 	for _, job := range s.jobs {
 		isDeleted := s.deleted[job.Name]
-		if !isDeleted && !job.IsMigrating && clock.NewClock(job.EndAt).BeforeOrEqual(currentTime) {
+		if !isDeleted && !job.IsMigrating() && clock.NewClock(job.EndAt).BeforeOrEqual(currentTime) {
 			events = append(events, &submitter.DeleteEvent{PodNamespace: "default", PodName: job.Name})
 			s.deleted[job.Name] = true	
 		}

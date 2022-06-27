@@ -30,9 +30,20 @@ func (suite *MigrationSuite) SetupTest() {
 }
 
 
+func (suite *MigrationSuite) TestSetNewNode() {
+	controllerStub := new(ControllerStub)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:30,NewNode: "j3"}}, nil).Once()
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{}, nil).Once()
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,suite.jobs,endTime) 
+ 	sut.Submit(clockNow, nil, nil)	
+	events := assertJobMigratedAfterTime(suite.T(),clockNow,sut,"mj2")
+	assertContainsSubmitMigrationPodEventOnTargetNode(suite.T(),events,"mj2","j3")
+	
+}
+
 func (suite *MigrationSuite) TestMigrateMultipleJobs() {
 	controllerStub := new(ControllerStub)
-	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:30}}, nil).Once() // 10GB
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j2",Usage:30}}, nil).Once() // GB
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j1",Usage:30}}, nil).Once()
 	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{}, nil).Once()
 
@@ -179,6 +190,23 @@ func assertContainsSubmitMigrationPodEvent(t testing.TB, events []submitter.Even
 		}
 	}
 	assert.True(t, isContained,"contains submit event for "+podName)
+}
+
+func assertContainsSubmitMigrationPodEventOnTargetNode(t testing.TB, events []submitter.Event, podName,targetNode string) {
+	isContained := false
+
+	for _,event := range events {
+		if pod, ok := event.(*submitter.SubmitEvent); ok {
+			if pod.Pod.ObjectMeta.Name == podName { 
+				if pod.Pod.Spec.NodeName == targetNode {
+					isContained = true
+				} else {
+					assert.Fail(t, "pod "+podName+" is not on target node but on "+pod.Pod.Spec.NodeName)
+				}
+			}
+		}
+	}
+	assert.True(t, isContained,"contains submit event on node "+ targetNode +" for "+podName)
 }
 
 func assertContainsDeleteOldPodEvent(t testing.TB, events []submitter.Event, podName string) {

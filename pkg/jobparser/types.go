@@ -11,8 +11,23 @@ type PodMemory struct {
 	Records []Record
 	StartAt time.Time
 	EndAt time.Time
-	IsMigrating bool
+	IsMigratingToNode string
+	isMigrating bool
 }
+
+func (p PodMemory) IsMigrating() bool {
+	return p.isMigrating
+}
+
+func (p *PodMemory) FinishedMigration() {
+	p.isMigrating = false
+}
+
+func (p *PodMemory) StartMigration() {
+	p.isMigrating = true
+}
+
+
 
 type Record struct {
 	Time  time.Time

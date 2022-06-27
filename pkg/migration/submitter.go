@@ -157,7 +157,7 @@ func (m *MigrationSubmitter) Submit(
 		}
 
 	}
-	migevents := m.getEventsFromMigrations(currentTime)
+	migevents := m.getEventsFromFinishedMigrations(currentTime)
 	events := append(freezevents, migevents...)
 	// terminate
 	isSimulationFinished := m.endTime.BeforeOrEqual(currentTime)
@@ -167,18 +167,18 @@ func (m *MigrationSubmitter) Submit(
 	return events, nil
 }
 
-func (m *MigrationSubmitter) getEventsFromMigrations(currentTime clock.Clock) []submitter.Event {
+func (m *MigrationSubmitter) getEventsFromFinishedMigrations(currentTime clock.Clock) []submitter.Event {
 	events := make([]submitter.Event, 0, m.queue.RemainingValues()+1)
 	for m.queue.ExistNext() || m.queue.RemainingValues() == 1 {
 		nextJob := m.queue.Value()
 		jobTime := clock.NewClock(nextJob.StartAt)
 		if jobTime.BeforeOrEqual(currentTime) {
-			log.L.Info("pop from queue:", nextJob.Name)
+			log.L.Debug("pop from queue:", nextJob.Name)
 			job := jobparser.GetJob(nextJob.Name, m.jobs) // jobs are copied in iterator.. need original reference for communication with job deleter
 			jobparser.UpdateJobNameForMigration(job) // update global job reference name only when migration is finished
-			jobparser.UpdateJobNameForMigration(&nextJob)
-			pod := m.factory.NewMigratedPod(nextJob)
-			nextJob.IsMigrating = false
+			jobparser.UpdateJobNameForMigration(&nextJob) // TODO improve design
+			pod := m.factory.NewMigratedPodToNode(nextJob)
+			nextJob.FinishedMigration()
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
 
 			oldPod := util.GetOldPodName(pod.Name)
@@ -200,13 +200,16 @@ func (m *MigrationSubmitter) startMigrations(migrations []migration.MigrationCmd
 			return fmt.Errorf("could not get job %s", jobName)
 		}
 		job.Name = jobName
-		job.IsMigrating = true
+		if job.IsMigratingToNode == "" {
+			log.L.Info("No migrating node set for", jobName)
+		}
+		job.IsMigratingToNode = cmd.NewNode // true
 
 		podsize := cmd.Usage // GB
-		m.checker.StartMigration(currentTime,podsize,jobName)
+		m.checker.StartMigration(currentTime,podsize,jobName) // TODO use info of new node ?
 		finishTime :=  m.checker.GetMigrationFinishTime(jobName).ToMetaV1().Time
 		jobparser.UpdateJobForMigration(job,finishTime)
-		log.L.Debug("push migration to queue:", job.Name, " size ",podsize, " finishing at ", finishTime)
+		log.L.Debug("push migration to queue:", job.Name, " size ",podsize, " to node ",job.IsMigratingToNode," finishing at ", finishTime)
 		m.queue.Push(job)
 	}
 	return nil
