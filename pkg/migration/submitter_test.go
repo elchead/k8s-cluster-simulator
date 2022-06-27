@@ -154,19 +154,31 @@ func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *m
 	afterMigration := submissionTime.Add(migration.MigrationTime)
 	events, err := sut.Submit(afterMigration, nil, nil)
 	assert.NoError(t, err)
+	assertContainsSubmitMigrationPodEvent(t, events, migratedPodName)
 	assertContainsDeleteOldPodEvent(t, events, migratedPodName)
 	return events
 }
 
 func assertDeleteEvent(t testing.TB, event submitter.Event, podName string) {
 	assert.IsType(t,&submitter.DeleteEvent{},event)
-	// assert.Equal(t, podName, delete.PodName)
 }
 
 
 func assertSubmitEvent(t testing.TB, event submitter.Event, podName string) {
 	assert.IsType(t,&submitter.SubmitEvent{},event)
 	assert.Equal(t, podName, event.(*submitter.SubmitEvent).Pod.ObjectMeta.Name)
+}
+
+func assertContainsSubmitMigrationPodEvent(t testing.TB, events []submitter.Event, podName string) {
+	isContained := false
+	for _,event := range events {
+		if pod, ok := event.(*submitter.SubmitEvent); ok {
+			if pod.Pod.ObjectMeta.Name == podName {
+				isContained = true
+			}
+		}
+	}
+	assert.True(t, isContained,"contains submit event for "+podName)
 }
 
 func assertContainsDeleteOldPodEvent(t testing.TB, events []submitter.Event, podName string) {

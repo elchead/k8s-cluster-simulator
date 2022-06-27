@@ -176,11 +176,12 @@ func (m *MigrationSubmitter) getEventsFromMigrations(currentTime clock.Clock) []
 			log.L.Info("pop from queue:", nextJob.Name)
 			job := jobparser.GetJob(nextJob.Name, m.jobs) // jobs are copied in iterator.. need original reference for communication with job deleter
 			jobparser.UpdateJobNameForMigration(job) // update global job reference name only when migration is finished
+			jobparser.UpdateJobNameForMigration(&nextJob)
 			pod := m.factory.NewMigratedPod(nextJob)
 			nextJob.IsMigrating = false
 			events = append(events, &submitter.SubmitEvent{Pod: pod})
 
-			oldPod := pod.Name
+			oldPod := util.GetOldPodName(pod.Name)
 			events = append(events, &submitter.DeleteEvent{PodNamespace: "default", PodName: oldPod})
 
 			m.queue.Next()
