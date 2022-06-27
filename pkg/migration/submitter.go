@@ -38,17 +38,27 @@ type concurrentMigrationChecker struct {
 }
 func (m *concurrentMigrationChecker) StartMigration(t clock.Clock,gbSize float64,pod string) {
 	m.migrationStart[pod] = t
-	m.migrationFinish[pod] = m.getLastMigrationFinishTime(gbSize)
+	m.migrationFinish[pod] = m.getLastMigrationFinishTime(gbSize,t)
 }
 
-func (m *concurrentMigrationChecker) getLastMigrationFinishTime(gbSize float64) clock.Clock {
+func (m *concurrentMigrationChecker) getLastMigrationFinishTime(gbSize float64,now clock.Clock) clock.Clock {
 	if m.latestFinish == nil {
-		t :=  clock.NewClock(time.Now())
-		m.latestFinish = &t
+		m.latestFinish = &now
 	}
-	res := m.latestFinish.Add(GetMigrationTime(gbSize))
+
+	startTime := maxClock(*m.latestFinish, now)
+	res := startTime.Add(GetMigrationTime(gbSize))
 	m.latestFinish = &res
 	return res
+}
+
+func maxClock(t1, t2 clock.Clock) (startTime clock.Clock) {
+	if t2.BeforeOrEqual(t1) {
+		startTime = t1
+	} else {
+		startTime = t2
+	}
+	return
 }
 
 func (m *concurrentMigrationChecker) GetMigrationFinishTime(pod string) clock.Clock {
@@ -161,6 +171,7 @@ func (m *MigrationSubmitter) getEventsFromMigrations(currentTime clock.Clock) []
 		jobTime := clock.NewClock(nextJob.StartAt)
 		if jobTime.BeforeOrEqual(currentTime) {
 			log.L.Debug("pop from queue:", nextJob.Name)
+			jobparser.UpdateJobNameForMigration(&nextJob)
 			pod := m.factory.NewMigratedPod(nextJob)
 			nextJob.IsMigrating = false
 			events = append(events, &submitter.SubmitEvent{Pod: pod})

@@ -198,6 +198,11 @@ func TestCheckerConcurrentMigration(t *testing.T) {
 	migrationTime := end.Sub(now)
 	sut.StartMigration(now,20.,"pod2")
 	assertTimeRoughlyEqual(t,now.Add(3*migrationTime),sut.GetMigrationFinishTime("pod2"))
+	t.Run("much later migration starts much later",func(t *testing.T){
+		later := now.Add(5*time.Hour)
+		sut.StartMigration(later,10.,"pod3")
+		assertTimeRoughlyEqual(t,later.Add(1*migrationTime),sut.GetMigrationFinishTime("pod3"))
+	})
 }
 
 func assertTimeRoughlyEqual(t testing.TB,time1 clock.Clock, time2 clock.Clock) {
