@@ -45,7 +45,7 @@ func main() {
 
 // configPath is the path of the config file, defaulting to "config".
 const podDataFile = "./pods_760.json"
-const simDuration = 5 * time.Hour + 50*time.Minute
+const simDuration = 5 * time.Hour
 
 var configPath string
 var checkerType string
@@ -56,7 +56,7 @@ var nodeFreeThreshold float64
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "config", "config file (excluding file extension)")
-	rootCmd.PersistentFlags().StringVar(&checkerType, "checker", "concurrent", "blocking or concurrent")
+	rootCmd.PersistentFlags().StringVar(&checkerType, "checker", "blocking", "blocking or concurrent")
 	rootCmd.PersistentFlags().StringVar(&migPolicy, "migPolicy", "optimal", "Migration choice policy: optimal,max,big-enough")
 	rootCmd.PersistentFlags().StringVar(&requestPolicy, "reqPolicy", "threshold", "Policy to request memory freeing: threshold,slope")
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")

@@ -1,6 +1,7 @@
 package jobparser
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -55,7 +56,7 @@ func TestAssignResourcesFromPodName(t *testing.T) {
 }
 func TestFilterRecords(t *testing.T) {
 	now := time.Now()
-	records := []Record{{Time:now,  Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 1e2},{Time: now.Add(4 * time.Minute), Usage: 1e3},{Time: now.Add(6 * time.Minute), Usage: 1e4}}
+	records := []Record{{Time:now,  Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 2e2},{Time: now.Add(4 * time.Minute), Usage: 3e3},{Time: now.Add(6 * time.Minute), Usage: 4e4}}
 	t.Run("get records bigger or equal that time",func(t *testing.T){
 		assert.Equal(t,records[2:], FilterRecordsBefore(records,now.Add(4 * time.Minute)))
 	})
@@ -71,6 +72,29 @@ func TestFilterRecords(t *testing.T) {
 		checkTime := now.Add(4 * time.Minute)
 		records := []Record{{Time:now,  Usage: 1e9}}
 		assert.Equal(t,[]Record{{Time:checkTime,  Usage: 1e9}},FilterRecordsBefore(records,checkTime))
+	})
+	t.Run("check integration that migrated job continues with correct memory usage", func(t *testing.T) {
+		records := []Record{{Time:now,  Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 2e2},{Time: now.Add(4 * time.Minute), Usage: 3e3},{Time: now.Add(6 * time.Minute), Usage: 4e4}}
+		recs := records
+		mem := &PodMemory{Name:"pod",Records:recs,StartAt:now,EndAt:now.Add(12 * time.Minute)}
+		// start migration
+		migStartTime := now.Add(3 * time.Minute)
+		UpdateJobForMigration(mem,migStartTime)
+		
+		
+		// finish migration
+		podv1 := PodFactory{SetResources: false}.NewMigratedPod(*mem)
+		fmt.Println(podv1.Annotations)	
+		migFinishTime := migStartTime.Add(2 * time.Minute)
+		migratedPod,err := pod.NewPod(podv1,clock.NewClock(migFinishTime),pod.Ok,"zone1")
+		assert.NoError(t, err)
+
+		res := migratedPod.ResourceUsage(clock.NewClock(migFinishTime.Add(1*time.Second)))["memory"]
+		assert.Equal(t,"3k",res.String())
+
+
+		res = migratedPod.ResourceUsage(clock.NewClock(migFinishTime.Add(1 * time.Minute + 1 * time.Second)))["memory"]
+		assert.Equal(t,"40k",res.String())
 	})
 }
 

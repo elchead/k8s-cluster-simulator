@@ -200,15 +200,15 @@ func (m *MigrationSubmitter) startMigrations(migrations []migration.MigrationCmd
 			return fmt.Errorf("could not get job %s", jobName)
 		}
 		job.Name = jobName
-		if job.IsMigratingToNode == "" {
-			log.L.Info("No migrating node set for", jobName)
+		if cmd.NewNode == "" {
+			log.L.Info("No migrating node set for ", jobName)
 		}
 		job.IsMigratingToNode = cmd.NewNode // true
 
 		podsize := cmd.Usage // GB
 		m.checker.StartMigration(currentTime,podsize,jobName) // TODO use info of new node ?
 		finishTime :=  m.checker.GetMigrationFinishTime(jobName).ToMetaV1().Time
-		jobparser.UpdateJobForMigration(job,finishTime)
+		jobparser.UpdateJobForMigration(job,currentTime.ToMetaV1().Time)
 		log.L.Debug("push migration to queue:", job.Name, " size ",podsize, " to node ",job.IsMigratingToNode," finishing at ", finishTime)
 		m.queue.Push(job)
 	}
