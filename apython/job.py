@@ -121,8 +121,11 @@ class Job:
 
     def get_execution_time(self):
         total = 0
+        # print("job execution:")
         for poddata in self.node_data:
             if poddata:
+                # TODO BUG adding multiple times since exec time not resetted?
+                # print("EXEC TIME", poddata.get_execution_time())
                 total += poddata.get_execution_time()
         return total
 
@@ -137,10 +140,13 @@ class Job:
 def get_shifted_timestamps(p: "List[PodData]"):
     cp = copy.deepcopy(p)
     for prior_idx, data in enumerate(cp[1:]):
-        if data:
-            last_time = cp[prior_idx].time[-1]
-            new_time = np.array(data.time) + last_time
-            data.time = new_time
+        try:
+            if data:
+                last_time = cp[prior_idx].time[-1]
+                new_time = np.array(data.time) + last_time
+                data.time = new_time
+        except Exception as e:
+            raise Exception("shifting timestamps not possible. Job was migrated during migration?")
     return cp
 
 

@@ -23,7 +23,13 @@ def evaluate_sim(title, plot, fname, nbr_jobs=50):
     print(f"Evaluate {title}")
     data, jobs = load_data(fname)
     evaluate_jobs(zones, data, jobs, title, plot=plot, nbr_jobs=nbr_jobs)
-    print("----")
+    # print("o10n-worker-l-bfz7d-7jj7p")
+    # print(jobs["o10n-worker-l-bfz7d-7jj7p"].node_data[0].memory)
+    # print(jobs["o10n-worker-l-bfz7d-7jj7p"].node_data[1].memory)
+    # print("other")
+    # print(jobs["o10n-worker-l-7qvtp-r7nmj"].node_data[0].memory)
+    # print(jobs["o10n-worker-l-7qvtp-r7nmj"].node_data[1].memory)
+    # print("----")
     if plot:
         plot_node_usage_with_mig_markers(title, data, zones)
         # plot_node_usage(title, data, zones)
@@ -118,8 +124,11 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
     for jobname, job in jobs.items():
         res.add_job_time(job.get_execution_time())
         res.add_migration(jobname, job.nbr_migrations, job.get_migration_time())
-        for zone, poddata in job.get_pod_runs_for_plot():
-            res.set_job_max_mem(jobname, np.max(poddata.memory))
+        try:
+            for zone, poddata in job.get_pod_runs_for_plot():
+                res.set_job_max_mem(jobname, np.max(poddata.memory))
+        except Exception as e:
+            print(f"Job {job.name} failed. Reason: {e}")
     for zone in zones:
         res.set_zone_stats(zone, get_zone_memory(data, zone))
 
@@ -156,8 +165,8 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
     print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
 
     if plot:
-        # for z in zones:
-        #     axis[z].legend()
+        for z in zones:
+            axis[z].legend()
 
         t = title.replace(" ", "_")
         plt.savefig(f"pod_mem_{t}")
