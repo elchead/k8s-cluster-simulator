@@ -45,7 +45,8 @@ func main() {
 
 // configPath is the path of the config file, defaulting to "config".
 const podDataFile = "./pods_760.json"
-const simDuration = 5 * time.Hour
+var simDurationMap = map[string]time.Duration{"./pods_760.json":3 * time.Hour + 10*time.Minute}
+var simDuration = simDurationMap[podDataFile]
 
 var configPath string
 var checkerType string
