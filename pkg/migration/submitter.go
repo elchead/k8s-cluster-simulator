@@ -208,7 +208,7 @@ func (m *MigrationSubmitter) startMigrations(migrations []migration.MigrationCmd
 		podsize := cmd.Usage // GB
 		m.checker.StartMigration(currentTime,podsize,jobName) // TODO use info of new node ?
 		finishTime :=  m.checker.GetMigrationFinishTime(jobName).ToMetaV1().Time
-		jobparser.UpdateJobForMigration(job,currentTime.ToMetaV1().Time)
+		jobparser.UpdateJobForMigration(job,currentTime.ToMetaV1().Time,finishTime)
 		log.L.Debug("push migration to queue:", job.Name, " size ",podsize, " to node ",job.IsMigratingToNode," finishing at ", finishTime)
 		m.queue.Push(job)
 	}

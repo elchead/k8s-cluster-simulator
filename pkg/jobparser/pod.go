@@ -78,11 +78,11 @@ func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
 	return append(res, podmem[beforeIdx:]...)
 }
 
-func UpdateJobForMigration(podinfo *PodMemory, migration time.Time) {
+func UpdateJobForMigration(podinfo *PodMemory, migrationStart,migrationFinish time.Time) {
 
-	podinfo.Records = FilterRecordsBefore(podinfo.Records,migration)
+	podinfo.Records = FilterRecordsBefore(podinfo.Records,migrationStart)
 	// podinfo.Name = "m" + podinfo.Name
-	podinfo.StartAt = migration	
+	podinfo.StartAt = migrationFinish	
 }
 
 func UpdateJobNameForMigration(podinfo *PodMemory) {
