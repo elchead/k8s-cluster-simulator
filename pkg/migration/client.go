@@ -104,7 +104,7 @@ func (c *Client) UpdateNodeMetrics(metrics map[string]node.Metrics) {
 }
 
 func (c *Client) GetFreeMemoryNode(name string) (float64, error) {
-	free, ok := c.UsedMemoryMap[name]
+	usedGb, ok := c.UsedMemoryMap[name]
 	if !ok {
 		return 0, errors.New("could not get free memory for node " +name)
 	}
@@ -112,7 +112,7 @@ func (c *Client) GetFreeMemoryNode(name string) (float64, error) {
 	if !ok {
 		return 0, errors.New("could not get total memory for node " +name)
 	}
-	return 100.- float64(free)/float64(total)*100., nil
+	return 100.- float64(usedGb)/float64(total)*100., nil
 }
 
 func (c *Client) 	GetFreeMemoryOfNodes() (monitoring.NodeFreeMemMap, error) {

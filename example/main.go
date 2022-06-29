@@ -110,7 +110,7 @@ var rootCmd = &cobra.Command{
 			requestPolicy := monitoring.NewRequestPolicy(requestPolicy, cluster, metricClient,nodeFreeThreshold)
 			migrationPolicy := monitoring.NewMigrationPolicy(migPolicy,cluster,metricClient)
 			migController := monitoring.NewController(requestPolicy, migrationPolicy)
-			checker := migration.NewMigrationChecker(checkerType)
+			checker := monitoring.NewMigrationChecker(checkerType)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory,checker))
 
 

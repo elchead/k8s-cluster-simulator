@@ -19,7 +19,7 @@ import (
 )
 
 const MigrationTime = 5 * time.Minute
-const BackoffInterval = 45 * time.Second
+const BackoffInterval = 45 * time.Second // TODO change to 30s? time to actually schedule pods on cluster
 type ControllerI interface {
 	GetMigrations() (migrations []migration.MigrationCmd, err error)
 }
@@ -224,7 +224,7 @@ func NewSubmitterWithJobs(controller ControllerI,jobs []jobparser.PodMemory) *Mi
 }
 
 func NewSubmitterWithJobsWithEndTime(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time) *MigrationSubmitter {
-	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime),factory: jobparser.PodFactory{SetResources:false},checker: NewBlockingMigrationChecker()}
+	return &MigrationSubmitter{controller: controller,jobs: jobs,queue: *jobparser.NewIterator([]jobparser.PodMemory{}),endTime: clock.NewClock(endTime),factory: jobparser.PodFactory{SetResources:false},checker: monitoring.NewBlockingMigrationChecker()}
 }
 
 func NewSubmitterWithJobsWithEndTimeFactory(controller ControllerI,jobs []jobparser.PodMemory,endTime time.Time,factory jobparser.PodFactory,checker monitoring.MigrationCheckerI) *MigrationSubmitter {

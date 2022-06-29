@@ -77,19 +77,25 @@ func TestFilterRecords(t *testing.T) {
 		records := []Record{{Time:now,  Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 2e2},{Time: now.Add(4 * time.Minute), Usage: 3e3},{Time: now.Add(6 * time.Minute), Usage: 4e4}}
 		recs := records
 		mem := &PodMemory{Name:"pod",Records:recs,StartAt:now,EndAt:now.Add(12 * time.Minute)}
+		factory := PodFactory{SetResources: false}
 		// start migration
 		migStartTime := now.Add(3 * time.Minute)
-		UpdateJobForMigration(mem,migStartTime)
+		podv1O := factory.NewMigratedPod(*mem)
+		podO,_ := pod.NewPod(podv1O,clock.NewClock(now),pod.Ok,"zone1")
+		resO := podO.ResourceUsage(clock.NewClock(migStartTime))["memory"]
+		assert.Equal(t,"3k",resO.String())
+		
 		
 		
 		// finish migration
-		podv1 := PodFactory{SetResources: false}.NewMigratedPod(*mem)
-		fmt.Println(podv1.Annotations)	
 		migFinishTime := migStartTime.Add(2 * time.Minute)
+		UpdateJobForMigration(mem,migStartTime,migFinishTime)
+		podv1 := factory.NewMigratedPod(*mem)
+		fmt.Println(podv1.Annotations)	
 		migratedPod,err := pod.NewPod(podv1,clock.NewClock(migFinishTime),pod.Ok,"zone1")
 		assert.NoError(t, err)
 
-		res := migratedPod.ResourceUsage(clock.NewClock(migFinishTime.Add(1*time.Second)))["memory"]
+		res := migratedPod.ResourceUsage(clock.NewClock(migFinishTime.Add(1 * time.Second)))["memory"]
 		assert.Equal(t,"3k",res.String())
 
 
