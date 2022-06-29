@@ -54,6 +54,7 @@ var migPolicy string
 var requestPolicy string
 var useMigrator bool
 var nodeFreeThreshold float64
+var requestFactor float64
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "config", "config file (excluding file extension)")
@@ -62,6 +63,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&requestPolicy, "reqPolicy", "threshold", "Policy to request memory freeing: threshold,slope")
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
 	rootCmd.PersistentFlags().Float64Var(&nodeFreeThreshold, "threshold", 45., "node free threshold in % (default 45.)")
+	rootCmd.PersistentFlags().Float64Var(&requestFactor, "requestFactor", 0., "node free threshold in % (default 45.)")
 }
 
 var rootCmd = &cobra.Command{
@@ -69,6 +71,12 @@ var rootCmd = &cobra.Command{
 	Short: "k8s-cluster-simulator provides a virtual kubernetes cluster interface for evaluating your scheduler.",
 
 	Run: func(cmd *cobra.Command, args []string) {
+		if useMigrator {
+			requestFactor = 0. // much more usage when no resource set at all! //.1 //.25 too big?
+		} else {
+			requestFactor = 1. 
+		}
+
 		ctx := newInterruptableContext()
 		// 1. Create a KubeSim with a pod queue and a scheduler.
 		queue := queue.NewPriorityQueue()
@@ -100,8 +108,7 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.L.Fatal("Failed to parse jobs", err)
 		}
-
-		podFactory := jobparser.PodFactory{SetResources: !useMigrator}
+		podFactory := jobparser.NewPodFactory(requestFactor) //jobparser.PodFactory{SetResources: !useMigrator}
 		submitter := jobparser.NewJobSubmitterWithFactory(jobs,podFactory)
 		sim.AddSubmitter("JobSubmitter", submitter)
 		if useMigrator {

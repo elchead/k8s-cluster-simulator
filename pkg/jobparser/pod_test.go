@@ -1,16 +1,52 @@
 package jobparser
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-cluster-simulator/pkg/pod"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+var podmem = PodMemory{Name: "pod", Records: []Record{{Time: time.Now(), Usage: 1e9}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e2}}}
+type PodFactorySuite struct {
+	suite.Suite
+	podmem PodMemory
+}
+
+func (suite *PodFactorySuite) SetupTest() {
+	suite.podmem = podmem
+}
+
+func (suite *PodFactorySuite) TestPodFactorySmallerRequest() {
+	sut := PodFactory{SetResources: true,RequestFactor: .2}
+	suite.Run("s size", func() {
+		podmem.Name = "o10n-worker-s-zx8wp-n5"
+		podspec := sut.New(podmem)
+		req := podspec.Spec.Containers[0].Resources.Requests["memory"]
+		assert.Equal(suite.T(),"6Gi",req.String())
+	})
+	suite.Run("m size", func() {
+		podmem.Name = "o10n-worker-m-zx8wp-n5"
+		podspec := sut.New(podmem)
+		req := podspec.Spec.Containers[0].Resources.Requests["memory"]
+		assert.Equal(suite.T(),"16Gi",req.String())
+	})
+	suite.Run("l size", func() {
+		podmem.Name = "o10n-worker-l-zx8wp-n5"
+		podspec := sut.New(podmem)
+		req := podspec.Spec.Containers[0].Resources.Requests["memory"]
+		assert.Equal(suite.T(),"26Gi",req.String())
+	})
+}
+
+func TestSuite(t *testing.T) {
+	suite.Run(t, new(PodFactorySuite))
+}
 
 func TestPodFactory(t *testing.T) {
 	sut := PodFactory{SetResources: false}
@@ -51,8 +87,10 @@ func TestGetJobSizeFromName(t *testing.T) {
 
 func TestAssignResourcesFromPodName(t *testing.T) {
 	podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: time.Now(), Usage: 1e9}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e2}}}
-	podspec := CreatePod(podmem)
-	assert.Equal(t,GetJobResources("m"),podspec.Spec.Containers[0].Resources)
+	podspec := CreatePod(podmem,1.)
+	memory := podspec.Spec.Containers[0].Resources.Requests["memory"]
+	expect := GetJobResources("m").Requests["memory"]
+	assert.Equal(t,expect.String(), memory.String())
 }
 func TestFilterRecords(t *testing.T) {
 	now := time.Now()
@@ -91,7 +129,7 @@ func TestFilterRecords(t *testing.T) {
 		migFinishTime := migStartTime.Add(2 * time.Minute)
 		UpdateJobForMigration(mem,migStartTime,migFinishTime)
 		podv1 := factory.NewMigratedPod(*mem)
-		fmt.Println(podv1.Annotations)	
+		// fmt.Println(podv1.Annotations)	
 		migratedPod,err := pod.NewPod(podv1,clock.NewClock(migFinishTime),pod.Ok,"zone1")
 		assert.NoError(t, err)
 
@@ -102,6 +140,11 @@ func TestFilterRecords(t *testing.T) {
 		res = migratedPod.ResourceUsage(clock.NewClock(migFinishTime.Add(1 * time.Minute + 1 * time.Second)))["memory"]
 		assert.Equal(t,"40k",res.String())
 	})
+}
+
+func TestGetFractionalGi(t *testing.T){
+	assert.Equal(t,"30Gi",getFractionalGi(30,1.))
+	assert.Equal(t,"2Gi",getFractionalGi(10,.25)) // TODO fractional cuts off decimals
 }
 
 func TestSetPodResources(t *testing.T) {

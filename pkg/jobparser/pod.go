@@ -18,11 +18,17 @@ type Time interface {
 
 type PodFactory struct {
 	SetResources bool
+	RequestFactor float64
+}
+
+func NewPodFactory(requestFactor float64) PodFactory {
+	setResources := requestFactor != 0.
+	return PodFactory{setResources,requestFactor}
 }
 
 func (f PodFactory)  New(podinfo PodMemory) *v1.Pod {
 	if f.SetResources {
-		return CreatePod(podinfo)
+		return CreatePod(podinfo,f.RequestFactor)
 	} else {
 		return CreatePodWithoutResources(podinfo)
 	}
@@ -78,10 +84,10 @@ func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
 	return append(res, podmem[beforeIdx:]...)
 }
 
+// is called at starting time of migration. name is updated when migration finished
 func UpdateJobForMigration(podinfo *PodMemory, migrationStart,migrationFinish time.Time) {
 
 	podinfo.Records = FilterRecordsBefore(podinfo.Records,migrationStart)
-	// podinfo.Name = "m" + podinfo.Name
 	podinfo.StartAt = migrationFinish	
 }
 
@@ -126,7 +132,7 @@ func CreatePodWithoutResources(podinfo PodMemory) *v1.Pod {
 	}
 }
 
-func CreatePod(podinfo PodMemory) *v1.Pod {
+func CreatePod(podinfo PodMemory,requestFactor float64) *v1.Pod {
 	size,err := GetJobSizeFromName(podinfo.Name)
 	if err != nil {
 		log.L.Info("Setting job size to s since:",err)
@@ -138,7 +144,7 @@ func CreatePod(podinfo PodMemory) *v1.Pod {
 			{
 				Name:  "worker",
 				Image: "worker-image",
-				Resources: GetJobResources(size),
+				Resources: GetJobResourcesWithRequest(GetJobResourceRequestWithFactor(size,requestFactor)),
 			},
 		},
 	}
@@ -146,20 +152,24 @@ func CreatePod(podinfo PodMemory) *v1.Pod {
 }
 
 func GetJobResourceRequest(size string) v1.ResourceList {
+	return GetJobResourceRequestWithFactor(size,1.)	
+}
+
+func GetJobResourceRequestWithFactor(size string,factor float64) v1.ResourceList {
 	switch size {
 	case "s":
 		return v1.ResourceList{
 			"cpu":            resource.MustParse("5"),
-			"memory":         resource.MustParse("30Gi"),
+			"memory":         resource.MustParse(getFractionalGi(30.,factor)),
 		      }
 	case "m":
 		return 	v1.ResourceList{
 			"cpu":            resource.MustParse("8"),
-			"memory":         resource.MustParse("80Gi"),
+			"memory":         resource.MustParse(getFractionalGi(80.,factor)),
 		      }
 	case "l": return v1.ResourceList{
 			"cpu":            resource.MustParse("8"),
-			"memory":         resource.MustParse("130Gi"),
+			"memory":         resource.MustParse(getFractionalGi(130.,factor)),
 		      }
 
 	case "xl": return v1.ResourceList{
@@ -171,6 +181,10 @@ func GetJobResourceRequest(size string) v1.ResourceList {
 	}
 }
 
+func getFractionalGi(amount,factor float64) string {
+	return fmt.Sprintf("%.0fGi", factor*amount)
+}
+
 func GetJobResourceLimit() v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":            resource.MustParse("10"),
@@ -179,8 +193,12 @@ func GetJobResourceLimit() v1.ResourceList {
 }
 
 func GetJobResources(size string) v1.ResourceRequirements {
+	return GetJobResourcesWithRequest(GetJobResourceRequestWithFactor(size,1.))
+}
+
+func GetJobResourcesWithRequest(req v1.ResourceList) v1.ResourceRequirements {
 	return v1.ResourceRequirements{
-		Requests: GetJobResourceRequest(size),
+		Requests:req,
 		Limits: GetJobResourceLimit(),
 	}
 }
