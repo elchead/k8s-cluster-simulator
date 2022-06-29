@@ -139,7 +139,7 @@ var rootCmd = &cobra.Command{
 
 func buildScheduler() scheduler.Scheduler {
 	// 1. Create a generic scheduler that mimics a kube-scheduler.
-	sched := scheduler.NewGenericScheduler( /* preemption enabled */ true)
+	sched := scheduler.NewGenericScheduler( /* preemption enabled */ false)
 
 	// 2. Register extender(s)
 	// sched.AddExtender(
