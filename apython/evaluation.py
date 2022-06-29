@@ -165,8 +165,8 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
     print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
 
     if plot:
-        for z in zones:
-            axis[z].legend()
+        # for z in zones:
+        #     axis[z].legend()
 
         t = title.replace(" ", "_")
         plt.savefig(f"pod_mem_{t}")
