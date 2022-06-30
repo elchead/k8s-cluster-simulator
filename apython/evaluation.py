@@ -158,11 +158,26 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
                 "migration time [s]:",
                 job.get_migration_time(),
             )
+
+        jobcolors = {}
         for zone, poddata in job.get_pod_runs_for_plot():
             if plot and jobname in top_pods:
-                axis[zone].plot(
-                    poddata.date, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x"
-                )
+                # set same colors for same job
+                if jobname in jobcolors:
+                    axis[zone].plot(
+                        poddata.date,
+                        poddata.memory,
+                        markevery=poddata.migration_idx,
+                        label=jobname,
+                        marker="x",
+                        color=jobcolors[jobname],
+                    )
+                else:
+                    p = axis[zone].plot(
+                        poddata.date, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x",
+                    )
+                    jobcolors[jobname] = p[0].get_color()
+
                 # axis[zone].set_xticks([])
     print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
 

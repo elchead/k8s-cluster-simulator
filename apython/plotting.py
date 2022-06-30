@@ -2,6 +2,15 @@ import matplotlib.pyplot as plt
 from parsing import *
 from job import *
 
+from matplotlib.cm import get_cmap
+from matplotlib.pyplot import cm
+
+
+# if need more colors use: https://stackoverflow.com/a/25730396/10531075
+name = "tab20"
+cmap = get_cmap(name)  # type: matplotlib.colors.ListedColormap
+colors = cmap.colors
+
 
 def plot_node_usage_with_mig_markers(title, data, zones):
     fig = plt.figure()
@@ -80,4 +89,5 @@ def init_plot_dict(title, zones):
         else:
             axs[i].set_title(z)
             axisdict[z] = axs[i]
+            axisdict[z].set_prop_cycle(color=colors)
     return fig, axisdict
