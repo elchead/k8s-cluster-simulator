@@ -146,18 +146,31 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
     print("Migrated pods:")
     top_pods = res.get_top_pods(nbr_jobs)
     for jobname, job in jobs.items():
+        migsize = job.get_migration_time()
         if job.nbr_migrations > 0:
-            print(
-                jobname,
-                "size [Gb]:",
-                res.job_max_mem[jobname],
-                "#migrations:",
-                job.nbr_migrations,
-                f"from {job.get_node(0)}",
-                f"to {job.get_node(1)};\t",
-                "migration time [s]:",
-                job.get_migration_time(),
-            )
+            fromto = [(job.get_node(n), job.get_node(n + 1)) for n in range(job.nbr_migrations)]
+            miginfo = {
+                "name": jobname,
+                "migrations": job.nbr_migrations,
+                "size": job.get_migration_sizes(),
+                "fromto": fromto,
+                "total_migration_time": job.get_migration_time(),
+            }
+            print(json.dumps(miginfo))
+
+            # OLD PRINT FORMAT
+            # fromto = [f"from {job.get_node(n)} to {job.get_node(n+1)}" for n in range(job.nbr_migrations)]
+
+            # print(
+            #     jobname,
+            #     "size [Gb]:",
+            #     job.get_migration_sizes(),  # res.job_max_mem[jobname],
+            #     "#migrations:",
+            #     job.nbr_migrations,
+            #     ";\t".join(fromto),
+            #     "migration time [s]:",
+            #     job.get_migration_time(),
+            # )
 
         jobcolors = {}
         for zone, poddata in job.get_pod_runs_for_plot():

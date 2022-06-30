@@ -140,6 +140,15 @@ class Job:
                 total += poddata.get_migration_duration()
         return total
 
+    def get_migration_sizes(self):
+        mig_sizes = []
+        for poddata in self.node_data:
+            if poddata and poddata.is_migrated:
+                mig_sizes.append(poddata.get_migration_size())
+        if len(mig_sizes) == 1:
+            return mig_sizes[0]
+        return mig_sizes
+
 
 def get_shifted_timestamps(p: "List[PodData]"):
     cp = copy.deepcopy(p)
