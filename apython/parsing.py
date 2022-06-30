@@ -5,6 +5,7 @@ from re import S
 from job import bytesto
 from typing import List
 import copy
+from dateutil.parser import parse
 
 
 def get_memory(t, node):
@@ -22,6 +23,21 @@ def get_zone_memory(data, name):
         z2 = get_memory(t, name)
         z_mem.append(bytesto(z2))
     return z_mem
+
+
+def get_zone_memory(data, name):
+    z_mem = []
+    for t in data:
+        z2 = get_memory(t, name)
+        z_mem.append(bytesto(z2))
+    return z_mem
+
+
+def get_node_time(data):
+    res = []
+    for t in data:
+        res.append(parse(t["Clock"]))
+    return res
 
 
 def get_node(name, stamp):

@@ -6,13 +6,16 @@ from job import *
 def plot_node_usage_with_mig_markers(title, data, zones):
     fig = plt.figure()
     plt.title(title)
-    plt.xlabel("Time [min]")
+    plt.xlabel("Time")
     plt.ylabel("Memory [Gb]")
     rawjobs = get_pod_usage_on_nodes_dict(data)
     color_dict = {"zone2": "b", "zone3": "y", "zone4": "g", "zone5": "r"}
+    t = get_node_time(data)
+    # print("TIME", t)
+    # plt.plot(t, range(len(t)))
     for zone in zones:
         mem = get_zone_memory(data, zone)
-        plt.plot(mem, label=zone, c=color_dict[zone])
+        plt.plot(t, mem, label=zone, c=color_dict[zone])
 
     # ax = fig.gca()
     # for i, p in enumerate(ax.get_lines()):  # this is the loop to change Labels and colors
@@ -26,7 +29,9 @@ def plot_node_usage_with_mig_markers(title, data, zones):
             for zone, poddata in pod.items():
                 poddata.is_migrated = True
                 zone_markers[zone].append(poddata.t_idx)
-                plt.plot(poddata.t_idx, poddata.get_migration_size(), label=zone, marker="x", c=color_dict[zone])
+                plt.plot(
+                    t[poddata.t_idx], poddata.get_migration_size(), label=zone, marker="x", c=color_dict[zone],
+                )
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys())

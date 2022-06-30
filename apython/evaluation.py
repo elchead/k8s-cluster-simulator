@@ -24,17 +24,13 @@ def evaluate_sim(title, plot, fname, nbr_jobs=50):
     f = open(fname, "r")
     data, jobs = load_data(f)
     evaluate_jobs(zones, data, jobs, title, plot=plot, nbr_jobs=nbr_jobs)
-    # print("o10n-worker-l-bfz7d-7jj7p")
-    # print(jobs["o10n-worker-l-bfz7d-7jj7p"].node_data[0].memory)
-    # print(jobs["o10n-worker-l-bfz7d-7jj7p"].node_data[1].memory)
+
     # print("other")
     # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[0].memory)
-    # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[0].time)
+    # print("0:", vars(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[0]))
 
-    # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_order)
+    # print("1:", vars(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[1]))
 
-    # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[1].memory)
-    # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[1].time)
     # print("----")
     if plot:
         plot_node_usage_with_mig_markers(title, data, zones)

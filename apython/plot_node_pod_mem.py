@@ -23,10 +23,11 @@ plt.xlabel("Time")
 plt.ylabel("Memory [Gb]")
 fname = "../m-mig.log"
 data = [json.loads(line) for line in open(fname, "r")]
-plt.plot(get_zone_memory(data, "zone2"), label="zone2")
-plt.plot(get_zone_memory(data, "zone3"), label="zone3")
-plt.plot(get_zone_memory(data, "zone4"), label="zone4")
-plt.plot(get_zone_memory(data, "zone5"), label="zone5")
+t = get_node_time(data)
+plt.plot(t, get_zone_memory(data, "zone2"), label="zone2")
+plt.plot(t, get_zone_memory(data, "zone3"), label="zone3")
+plt.plot(t, get_zone_memory(data, "zone4"), label="zone4")
+plt.plot(t, get_zone_memory(data, "zone5"), label="zone5")
 plt.legend()
 
 
