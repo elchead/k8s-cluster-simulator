@@ -45,7 +45,7 @@ import (
 // KubeSim represents a simulated kubernetes cluster.
 type KubeSim struct {
 	tick  time.Duration
-	clock clock.Clock
+	Clock clock.Clock
 
 	nodes       map[string]*node.Node
 	pendingPods queue.PodQueue
@@ -92,7 +92,7 @@ func NewKubeSim(
 
 	return &KubeSim{
 		tick:  time.Duration(conf.Tick) * time.Second,
-		clock: clk,
+		Clock: clk,
 		MigrationClient: metricClient,
 		nodes:       nodes,
 		pendingPods: queue,
@@ -115,7 +115,7 @@ func (k *KubeSim) AddSubmitter(name string, submitter submitter.Submitter) {
 // selected nodes.
 // This method blocks until ctx is done or this KubeSim finishes processing all pods.
 func (k *KubeSim) Run(ctx context.Context) error {
-	preMetricsClock := k.clock
+	preMetricsClock := k.Clock
 
 	submitterAddedEver := len(k.submitters) > 0
 
@@ -130,10 +130,10 @@ func (k *KubeSim) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			log.L.Debugf("Clock %s", k.clock.ToRFC3339())
+			log.L.Debugf("Clock %s", k.Clock.ToRFC3339())
 
 			// Rebuild metrics every tick for submitters to use.
-			met, err := metrics.BuildMetrics(k.clock, k.nodes, k.pendingPods)
+			met, err := metrics.BuildMetrics(k.Clock, k.nodes, k.pendingPods)
 			if err != nil {
 				return err
 			}
@@ -161,8 +161,8 @@ func (k *KubeSim) Run(ctx context.Context) error {
 			}
 
 
-			if k.clock.Sub(preMetricsClock) > k.metricsTick {
-				preMetricsClock = k.clock
+			if k.Clock.Sub(preMetricsClock) > k.metricsTick {
+				preMetricsClock = k.Clock
 				if err = k.writeMetrics(&met); err != nil {
 					return err
 				}
@@ -170,7 +170,7 @@ func (k *KubeSim) Run(ctx context.Context) error {
 				k.gcTerminatedPodsInNodes()
 			}
 
-			k.clock = k.clock.Add(k.tick)
+			k.Clock = k.Clock.Add(k.tick)
 		}
 	}
 
@@ -276,7 +276,7 @@ func buildMetricsWriters(conf *config.Config) ([]metrics.Writer, error) {
 func (k *KubeSim) toTerminate(submitterAddedEver bool) bool {
 	if _, err := k.pendingPods.Front(); err == queue.ErrEmptyQueue { // queue is empty
 		for _, node := range k.nodes { // cluster is empty
-			if node.PodsNum(k.clock) > 0 {
+			if node.PodsNum(k.Clock) > 0 {
 				return false
 			}
 		}
@@ -291,7 +291,7 @@ func (k *KubeSim) toTerminate(submitterAddedEver bool) bool {
 
 func (k *KubeSim) submit(metrics metrics.Metrics) error {
 	for name, subm := range k.submitters {
-		events, err := subm.Submit(k.clock, k, metrics)
+		events, err := subm.Submit(k.Clock, k, metrics)
 		if err != nil {
 			return err
 		}
@@ -300,7 +300,7 @@ func (k *KubeSim) submit(metrics metrics.Metrics) error {
 			if submitted, ok := e.(*submitter.SubmitEvent); ok {
 				pod := submitted.Pod
 				pod.UID = types.UID(pod.Name) // FIXME
-				pod.CreationTimestamp = k.clock.ToMetaV1()
+				pod.CreationTimestamp = k.Clock.ToMetaV1()
 				pod.Status.Phase = v1.PodPending
 
 				log.L.Tracef("Submitter %s: Submit %v", name, pod)
@@ -318,8 +318,8 @@ func (k *KubeSim) submit(metrics metrics.Metrics) error {
 					return err
 				}
 			} else if freeze,ok := e.(*submitter.FreezeUsageEvent); ok {
-				k.boundPods[freeze.PodKey].FreezeUsage(k.clock)
-				usage := k.boundPods[freeze.PodKey].ResourceUsage(k.clock)
+				k.boundPods[freeze.PodKey].FreezeUsage(k.Clock)
+				usage := k.boundPods[freeze.PodKey].ResourceUsage(k.Clock)
 				log.L.Debugf("Freezing usage of  %s at %dMB", freeze.PodKey,usage.Memory().ScaledValue(resource.Mega))
 			 
 			} else if del, ok := e.(*submitter.DeleteEvent); ok {
@@ -358,7 +358,7 @@ func (k *KubeSim) schedule() error {
 	// Build up-to-date NodeInfo.
 	nodeInfoMap := make(map[string]*nodeinfo.NodeInfo, len(k.nodes))
 	for name, node := range k.nodes {
-		info, err := node.ToNodeInfo(k.clock)
+		info, err := node.ToNodeInfo(k.Clock)
 		if err != nil {
 			return err
 		}
@@ -366,7 +366,7 @@ func (k *KubeSim) schedule() error {
 	}
 
 	// The scheduler makes scheduling decision.
-	events, err := k.scheduler.Schedule(k.clock, k.pendingPods, k, nodeInfoMap)
+	events, err := k.scheduler.Schedule(k.Clock, k.pendingPods, k, nodeInfoMap)
 	if err != nil {
 		return err
 	}
@@ -381,7 +381,7 @@ func (k *KubeSim) schedule() error {
 			}
 			bind.Pod.Spec.NodeName = nodeName
 
-			pod, err := node.BindPod(k.clock, bind.Pod)
+			pod, err := node.BindPod(k.Clock, bind.Pod)
 			if err != nil {
 				return err
 			}
@@ -413,16 +413,16 @@ func (k *KubeSim) writeMetrics(met *metrics.Metrics) error {
 
 func (k *KubeSim) gcTerminatedPodsInNodes() {
 	for _, node := range k.nodes {
-		node.GCTerminatedPods(k.clock)
+		node.GCTerminatedPods(k.Clock)
 	}
 }
 
 func (k *KubeSim) deletePodFromNode(podNamespace, podName string) {
 	key := util.PodKeyFromNames(podNamespace, podName)
-	k.boundPods[key].Delete(k.clock)
+	k.boundPods[key].Delete(k.Clock)
 
 	nodeName := k.boundPods[key].ToV1().Spec.NodeName
-	deletedFromNode := k.nodes[nodeName].DeletePod(k.clock, podNamespace, podName) // nolint
+	deletedFromNode := k.nodes[nodeName].DeletePod(k.Clock, podNamespace, podName) // nolint
 
 	if !deletedFromNode { // nolint
 		//

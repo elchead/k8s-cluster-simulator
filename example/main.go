@@ -45,7 +45,7 @@ func main() {
 
 // configPath is the path of the config file, defaulting to "config".
 const podDataFile = "./pods_760.json"
-var simDurationMap = map[string]time.Duration{"./pods_760.json":3 * time.Hour + 10*time.Minute}
+var simDurationMap = map[string]time.Duration{"./pods_760.json":5 * time.Hour + 10*time.Minute}
 var simDuration = simDurationMap[podDataFile]
 
 var configPath string
@@ -102,6 +102,7 @@ var rootCmd = &cobra.Command{
 			log.L.Fatal("Failed to read pod file:", err)
 		}
 		jobs,err := jobparser.ParsePodMemoriesFromJson(file)
+		assertSimStartBeforeAllJobStarts(jobs,sim.Clock.ToMetaV1().Time)
 		// job := jobparser.FindJob("o10n-worker-l-2xs2w-c7hh4",jobs)
 		// fmt.Println("MEM",job.Records[0].Usage)
 		// jobs = []jobparser.PodMemory{*job}
@@ -201,4 +202,12 @@ func newInterruptableContext() context.Context {
 // for test
 func lifo(pod0, pod1 *v1.Pod) bool { // nolint
 	return pod1.CreationTimestamp.Before(&pod0.CreationTimestamp)
+}
+
+func assertSimStartBeforeAllJobStarts(jobs []jobparser.PodMemory,startTime time.Time) {
+	for _,job := range jobs {
+		if job.StartAt.Before(startTime) {
+			log.L.Fatalf("job %s started at %s before sim start at %s", job.Name, job.StartAt.String(), startTime.String())
+		}
+	}
 }
