@@ -3,6 +3,7 @@ from typing import List
 import copy
 import numpy as np
 import math
+from date import get_date
 
 maxRestarts = 10
 
@@ -33,6 +34,7 @@ def get_pod_usage_on_nodes_dict(data):
                 continue
             pods[job][node].memory.append(bytesto(v["ResourceUsage"]["memory"]))
             pods[job][node].time.append(v["ExecutedSeconds"])
+            pods[job][node].date.append(get_date(v))
             if pods[job][node].t_idx == -1:
                 pods[job][node].t_idx = t_idx
         t_idx += 1
@@ -41,16 +43,18 @@ def get_pod_usage_on_nodes_dict(data):
 
 class PodData:
     @classmethod
-    def withdata(cls, time, memory, is_migrated=False):
+    def withdata(cls, time, memory, date, is_migrated=False):
         p = cls()
         p.memory = memory
         p.time = time
         p.is_migrated = is_migrated
+        p.date = date
         return p
 
     def __init__(self):
         self.memory = []
         self.time = []
+        self.date = []
         self.migration_idx = []
         self.is_migrated = False
         self.t_idx = -1
@@ -101,7 +105,7 @@ class Job:
         self._set_name(podname)
         self.node_order[count] = node
         is_migrated = count > 0
-        self.node_data[count] = PodData.withdata(nodedata.time, nodedata.memory, is_migrated=is_migrated)
+        self.node_data[count] = PodData.withdata(nodedata.time, nodedata.memory, nodedata.date, is_migrated=is_migrated)
 
     def _set_name(self, name):
         count = count_m(name)

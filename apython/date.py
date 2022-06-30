@@ -10,9 +10,14 @@ def get_dates(data) -> defaultdict(list):
     #     dates[pod].append(parse(poddata["BoundAt"]))
     for stamp in data:  # enumerate(data[1:]):
         for pod, poddata in stamp["Pods"].items():
-            next_date = parse(poddata["BoundAt"]) + datetime.timedelta(seconds=poddata["ExecutedSeconds"])
+            next_date = get_date(poddata)
             dates[pod].append(next_date)
     return dates
+
+
+def get_date(poddata):
+    next_date = parse(poddata["BoundAt"]) + datetime.timedelta(seconds=poddata["ExecutedSeconds"])
+    return next_date
 
 
 # def get_next_date(prior_clock, diff_executed_seconds) -> datetime.datetime:

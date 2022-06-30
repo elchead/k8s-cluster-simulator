@@ -21,14 +21,20 @@ def get_provision_requests(file) -> List[str]:
 
 def evaluate_sim(title, plot, fname, nbr_jobs=50):
     print(f"Evaluate {title}")
-    data, jobs = load_data(fname)
+    f = open(fname, "r")
+    data, jobs = load_data(f)
     evaluate_jobs(zones, data, jobs, title, plot=plot, nbr_jobs=nbr_jobs)
     # print("o10n-worker-l-bfz7d-7jj7p")
     # print(jobs["o10n-worker-l-bfz7d-7jj7p"].node_data[0].memory)
     # print(jobs["o10n-worker-l-bfz7d-7jj7p"].node_data[1].memory)
     # print("other")
-    # print(jobs["o10n-worker-l-7qvtp-r7nmj"].node_data[0].memory)
-    # print(jobs["o10n-worker-l-7qvtp-r7nmj"].node_data[1].memory)
+    # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[0].memory)
+    # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[0].time)
+
+    # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_order)
+
+    # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[1].memory)
+    # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[1].time)
     # print("----")
     if plot:
         plot_node_usage_with_mig_markers(title, data, zones)
@@ -47,8 +53,8 @@ def evaluate_provisions(f):
         print(p, end="")
 
 
-def load_data(fname):
-    data = [json.loads(line) for line in open(fname, "r")]
+def load_data(f):
+    data = [json.loads(line) for line in f]
     rawjobs = get_pod_usage_on_nodes_dict(data)
     jobs = create_jobs_from_dict(rawjobs)
     return data, jobs
@@ -159,9 +165,9 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
         for zone, poddata in job.get_pod_runs_for_plot():
             if plot and jobname in top_pods:
                 axis[zone].plot(
-                    poddata.time, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x"
+                    poddata.date, poddata.memory, markevery=poddata.migration_idx, label=jobname, marker="x"
                 )
-                axis[zone].set_xticks([])
+                # axis[zone].set_xticks([])
     print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
 
     if plot:
