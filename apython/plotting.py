@@ -11,6 +11,8 @@ name = "tab20"
 cmap = get_cmap(name)  # type: matplotlib.colors.ListedColormap
 colors = cmap.colors
 
+dpi = 200
+
 
 def plot_node_usage_with_mig_markers(title, data, zones):
     fig = plt.figure()
@@ -45,7 +47,7 @@ def plot_node_usage_with_mig_markers(title, data, zones):
     by_label = dict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys())
     # plt.legend()
-    plt.savefig(title.replace(" ", "_"))
+    plt.savefig(title.replace(" ", "_"), dpi=dpi)
 
     plt.figure()
     plt.title("Slope " + title)
@@ -54,7 +56,7 @@ def plot_node_usage_with_mig_markers(title, data, zones):
         slope = np.diff(mem)
         plt.plot(slope, label=zone, c=color_dict[zone])
     plt.legend(by_label.values(), by_label.keys())
-    plt.savefig("slope_" + title.replace(" ", "_"))
+    plt.savefig("slope_" + title.replace(" ", "_"), dpi=dpi)
 
 
 def plot_node_usage(title, data, zones):
@@ -65,7 +67,7 @@ def plot_node_usage(title, data, zones):
     for zone in zones:
         plt.plot(get_zone_memory(data, zone), label=zone)
     plt.legend()
-    plt.savefig(title.replace(" ", "_"))
+    plt.savefig(title.replace(" ", "_"), dpi=dpi)
 
 
 def init_plot_dict(title, zones):
@@ -78,6 +80,8 @@ def init_plot_dict(title, zones):
         fig, axs = plt.subplots(2, len(zones) - 2, sharex=True)
     else:
         fig, axs = plt.subplots(1, len(zones), sharex=True)
+    fig.set_figheight(8)
+    fig.set_figwidth(18)
     fig.suptitle(f"Pod memories ({title})")
 
     fig.text(0.5, 0.04, "Time", ha="center")

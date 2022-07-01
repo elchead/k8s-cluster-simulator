@@ -199,5 +199,6 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
         #     axis[z].legend()
 
         t = title.replace(" ", "_")
-        plt.savefig(f"pod_mem_{t}")
+        plt.savefig(f"pod_mem_{t}", dpi=dpi, bbox_inches="tight")
+        # plt.savefig("graph.pdf")
 
