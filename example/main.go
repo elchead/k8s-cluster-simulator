@@ -120,9 +120,9 @@ var rootCmd = &cobra.Command{
 			log.L.Info("Setting migration threshold:",nodeFreeThreshold, "% ",  nodeFreeThreshold/100.)
 			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
 			requestPolicy := monitoring.NewRequestPolicy(requestPolicy, cluster, metricClient,nodeFreeThreshold)
-			migrationPolicy := monitoring.NewMigrationPolicy(migPolicy,cluster,metricClient)
-			migController := monitoring.NewController(requestPolicy, migrationPolicy)
 			checker := monitoring.NewMigrationChecker(checkerType)
+			migrationPolicy := monitoring.NewMigrationPolicyWithChecker(migPolicy,cluster,metricClient,checker)
+			migController := monitoring.NewController(requestPolicy, migrationPolicy)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory,checker))
 
 
