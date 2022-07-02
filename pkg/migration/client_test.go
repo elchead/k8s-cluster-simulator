@@ -19,6 +19,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func TestClientReturnsRuntimeAndExecutedSeconds(t *testing.T) {
+	sut := migration.NewClient()	
+	podmetrics := map[string]pod.Metrics{"worker":{Runtime:3600,ExecutedSeconds:1800,Node:"zone3",ResourceUsage:createMemoryResource(50.)}}
+	sut.UpdatePodMetrics(podmetrics)
+	assert.Equal(t,int32(3600),sut.GetRuntime("worker"))
+	assert.Equal(t,int32(1800),sut.GetExecutionTime("worker"))
+}
+
 func TestMemorizer(t *testing.T){
 	sut := &migration.Memorizer[int]{MemoInterval: 3}
 	sut.Update(1)

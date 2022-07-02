@@ -38,6 +38,8 @@ type Client struct {
 	UsedMemoryMap map[string]int64 // key: nodeName
 	TotalMemoryMap map[string]int64 // key: nodeName
 	PodMemoryMap map[string]monitoring.PodMemMap // key: nodeName
+	PodRuntime map[string]int32 // key: podName
+	PodExecution map[string]int32 // key: podName
 	PodMemorizer map[string]*Memorizer[monitoring.PodMemMap]
 	MemoInterval int
 }
@@ -47,7 +49,15 @@ func NewClient() *Client {
 }
 
 func NewClientWithMemoStep(memostep int) *Client {
-	return &Client{UsedMemoryMap: make(map[string]int64), TotalMemoryMap: make(map[string]int64), PodMemoryMap: make(map[string]monitoring.PodMemMap),PodMemorizer: make(map[string]*Memorizer[monitoring.PodMemMap]),MemoInterval: memostep}
+	return &Client{UsedMemoryMap: make(map[string]int64), TotalMemoryMap: make(map[string]int64), PodMemoryMap: make(map[string]monitoring.PodMemMap),PodMemorizer: make(map[string]*Memorizer[monitoring.PodMemMap]),MemoInterval: memostep,PodRuntime: make(map[string]int32),PodExecution: make(map[string]int32)}
+}
+
+func (c Client) GetRuntime(pod string) (int32) {
+	return c.PodRuntime[pod]
+}
+
+func (c Client) GetExecutionTime(pod string) (int32) {
+	return c.PodExecution[pod]
 }
 
 func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
@@ -56,6 +66,8 @@ func (c *Client) UpdatePodMetric(podname string,pd pod.Metrics) {
 		c.PodMemoryMap[pd.Node] = make(monitoring.PodMemMap)		
 	} 
 	c.PodMemoryMap[pd.Node][podname] = float64(intUsage)
+	c.PodRuntime[podname] = pd.Runtime
+	c.PodExecution[podname] = pd.ExecutedSeconds
 }
 
 func (c *Client) UpdatePodMetrics(pods map[string]pod.Metrics) {
