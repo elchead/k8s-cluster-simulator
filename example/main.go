@@ -44,9 +44,8 @@ func main() {
 }
 
 // configPath is the path of the config file, defaulting to "config".
-const podDataFile = "./pods_760.json"
-var simDurationMap = map[string]time.Duration{"./pods_760.json":5 * time.Hour + 10*time.Minute}
-var simDuration = simDurationMap[podDataFile]
+var podDataFile string //=  // "./pods_760.json"
+var simDurationMap = map[string]time.Duration{"./pods_760.json":5 * time.Hour + 10*time.Minute,"./pods_2715.json":10 * time.Hour + 10*time.Minute}
 
 var configPath string
 var checkerType string
@@ -57,13 +56,14 @@ var nodeFreeThreshold float64
 var requestFactor float64
 
 func init() {
+	rootCmd.PersistentFlags().StringVar(&podDataFile, "file", "./pods_760.json", "path to pod data")
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "config", "config file (excluding file extension)")
 	rootCmd.PersistentFlags().StringVar(&checkerType, "checker", "blocking", "blocking or concurrent")
 	rootCmd.PersistentFlags().StringVar(&migPolicy, "migPolicy", "optimal", "Migration choice policy: optimal,max,big-enough")
 	rootCmd.PersistentFlags().StringVar(&requestPolicy, "reqPolicy", "threshold", "Policy to request memory freeing: threshold,slope")
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
 	rootCmd.PersistentFlags().Float64Var(&nodeFreeThreshold, "threshold", 45., "node free threshold in % (default 45.)")
-	rootCmd.PersistentFlags().Float64Var(&requestFactor, "requestFactor", 0., "node free threshold in % (default 45.)")
+	rootCmd.PersistentFlags().Float64Var(&requestFactor, "requestFactor", 0., "fraction of job sizing request as decimal (default 0.)")
 }
 
 var rootCmd = &cobra.Command{
@@ -91,6 +91,10 @@ var rootCmd = &cobra.Command{
 		}
 		if err != nil {
 			log.L.Fatal("Failed to read config:", err)
+		}
+		simDuration,ok := simDurationMap[podDataFile]
+		if !ok {
+			log.L.Fatal("Failed to find sim duration for file:", podDataFile)
 		}
 		sim,_ := kubesim.NewKubeSim(conf, queue, sched,metricClient)
 		startTime, _ := time.Parse(time.RFC3339, conf.StartClock)
