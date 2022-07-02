@@ -141,7 +141,6 @@ func (m *MigrationSubmitter) Submit(
 	met metrics.Metrics) ([]submitter.Event, error) {
 	var freezevents []submitter.Event
 	if m.checker.IsReady(currentTime) {
-		// log.L.Infof("migration checker is ready")
 		migrations, err := m.controller.GetMigrations()
 		if err != nil {
 			return []submitter.Event{}, errors.Wrap(err, "migrator failed")
@@ -210,6 +209,7 @@ func (m *MigrationSubmitter) startMigrations(migrations []migration.MigrationCmd
 		finishTime :=  m.checker.GetMigrationFinishTime(jobName).ToMetaV1().Time
 		jobparser.UpdateJobForMigration(job,currentTime.ToMetaV1().Time,finishTime)
 		log.L.Debug("push migration to queue:", job.Name, " size ",podsize, " to node ",job.IsMigratingToNode," finishing at ", finishTime)
+		log.L.Infof("MigrationTime %s %.0f", jobName, finishTime.Sub(currentTime.ToMetaV1().Time).Seconds())
 		m.queue.Push(job)
 	}
 	return nil
