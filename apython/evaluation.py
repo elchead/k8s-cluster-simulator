@@ -23,6 +23,11 @@ def evaluate_sim(title, plot, fname, nbr_jobs=50):
     print(f"Evaluate {title}")
     f = open(fname, "r")
     data, jobs = load_data(f)
+    try:
+        with open("mig-sim.log") as f:
+            set_migration_times(f)
+    except Exception as e:
+        print("Could not evaluate migration times", e)
     evaluate_jobs(zones, data, jobs, title, plot=plot, nbr_jobs=nbr_jobs)
 
     # print("other")
@@ -51,8 +56,10 @@ def evaluate_provisions(f):
 
 def load_data(f):
     data = [json.loads(line) for line in f]
-    rawjobs = get_pod_usage_on_nodes_dict(data)
+    rawjobs, jobtimes = get_pod_usage_on_nodes_dict(data)
     jobs = create_jobs_from_dict(rawjobs)
+    for jobname, t in jobtimes.items():
+        jobs[jobname].set_runtime(t)
     return data, jobs
 
 
@@ -125,7 +132,7 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
 
     for jobname, job in jobs.items():
         res.add_job_time(job.get_execution_time())
-        res.add_migration(jobname, job.nbr_migrations, job.get_migration_time())
+        res.add_migration(jobname, job.nbr_migrations, job.get_migration_duration())
         try:
             for zone, poddata in job.get_pod_runs_for_plot():
                 res.set_job_max_mem(jobname, np.max(poddata.memory))
@@ -146,15 +153,20 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
     print("Migrated pods:")
     top_pods = res.get_top_pods(nbr_jobs)
     for jobname, job in jobs.items():
-        migsize = job.get_migration_time()
         if job.nbr_migrations > 0:
             fromto = [(job.get_node(n), job.get_node(n + 1)) for n in range(job.nbr_migrations)]
+            migtimes = [
+                (job.get_migration_timestamps()[i] - migtime) / job.runtime * 100
+                for i, migtime in enumerate(job.get_migration_durations())
+            ]  # executed seconds counts during migration so subtract it
             miginfo = {
                 "name": jobname,
                 "migrations": job.nbr_migrations,
                 "size": job.get_migration_sizes(),
                 "fromto": fromto,
-                "total_migration_time": job.get_migration_time(),
+                "migration_duration": Migration_times[jobname],  # job.get_migration_duration(),
+                "migration_percentage": job.get_migration_duration() / job.runtime * 100,
+                "job_progress_percentage": migtimes,
             }
             print(json.dumps(miginfo))
 

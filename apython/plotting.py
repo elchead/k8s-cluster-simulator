@@ -19,7 +19,7 @@ def plot_node_usage_with_mig_markers(title, data, zones):
     plt.title(title)
     plt.xlabel("Time")
     plt.ylabel("Memory [Gb]")
-    rawjobs = get_pod_usage_on_nodes_dict(data)
+    rawjobs,_ = get_pod_usage_on_nodes_dict(data)
     color_dict = {"zone2": "b", "zone3": "y", "zone4": "g", "zone5": "r"}
     t = get_node_time(data)
     # print("TIME", t)

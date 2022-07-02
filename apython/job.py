@@ -7,6 +7,21 @@ from date import get_date
 
 maxRestarts = 10
 
+Migration_times = defaultdict(list)
+
+
+def set_migration_times(file) -> "dict[str, int]":
+    pattern = "MigrationTime"
+    lines = file.readlines()
+    for line in lines:
+        match = pattern in line  # re.search(pattern, line)
+        if match:
+            # print(line)
+            str_res = line.split(" ")
+            job = str_res[3]
+            time = int(str_res[4].rstrip('"\n'))
+            Migration_times[job].append(time)
+
 
 def get_migration_time(gbSz: float):
     return math.ceil(3.3506 * gbSz)
@@ -24,6 +39,7 @@ def create_jobs_from_dict(job_node_dict):
 
 def get_pod_usage_on_nodes_dict(data):
     pods = defaultdict(lambda: defaultdict(PodData))  # [job][node]
+    jobtimes = {}
     t_idx = 0
     for d in data:
         for k, v in get_pods(d).items():
@@ -37,8 +53,9 @@ def get_pod_usage_on_nodes_dict(data):
             pods[job][node].date.append(get_date(v))
             if pods[job][node].t_idx == -1:
                 pods[job][node].t_idx = t_idx
+            jobtimes[job] = v["Runtime"]
         t_idx += 1
-    return pods
+    return pods, jobtimes
 
 
 class PodData:
@@ -57,7 +74,7 @@ class PodData:
         self.date = []
         self.migration_idx = []
         self.is_migrated = False
-        self.t_idx = -1
+        self.t_idx = -1  # migration idx
 
     def get_execution_time(self):
         return self.time[-1]
@@ -91,6 +108,7 @@ class Job:
     nbr_migrations: int
     node_order: "List[str]"
     node_data: "List[PodData]"
+    runtime: int
 
     def __init__(self, name=""):
         self.nodes = defaultdict(PodData)
@@ -98,6 +116,18 @@ class Job:
         self.node_order = [""] * maxRestarts
         self.node_data = [None] * maxRestarts  # PodData
         self.name = self._set_name(name)
+        self.runtime = 0
+
+    def set_runtime(self, runtime):
+        self.runtime = runtime
+
+    def get_migration_timestamps(self):
+        data = [e for e in add_migration_idx(get_shifted_timestamps(self.node_data)) if e]
+        stamps = []
+        for d in data:
+            for m in d.migration_idx:
+                stamps.append(d.time[m])
+        return stamps[::2]  # only show checkpoint idx not restore idx
 
     def add_pod(self, podname, node, nodedata: PodData):
         count = count_m(podname)
@@ -133,12 +163,18 @@ class Job:
                 total += poddata.get_execution_time()
         return total
 
-    def get_migration_time(self):
-        total = 0
-        for poddata in self.node_data:
-            if poddata:
-                total += poddata.get_migration_duration()
-        return total
+    def get_migration_duration(self):
+        return sum(self.get_migration_durations())
+
+    def get_migration_durations(self) -> "List[int]":
+        return Migration_times[self.name]
+        # total = []
+        # for poddata in self.node_data:
+        #     if poddata:
+        #         t = poddata.get_migration_duration()
+        #         if t > 0:
+        #             total.append(t)
+        # return total
 
     def get_migration_sizes(self):
         mig_sizes = []
