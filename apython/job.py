@@ -53,7 +53,8 @@ def get_pod_usage_on_nodes_dict(data):
             pods[job][node].date.append(get_date(v))
             if pods[job][node].t_idx == -1:
                 pods[job][node].t_idx = t_idx
-            jobtimes[job] = v["Runtime"]
+            if count_m(job) == 0:  # ignore migrated pods
+                jobtimes[job] = v["Runtime"]
         t_idx += 1
     return pods, jobtimes
 
