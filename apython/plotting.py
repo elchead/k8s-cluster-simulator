@@ -16,10 +16,11 @@ dpi = 200
 
 def plot_node_usage_with_mig_markers(title, data, zones):
     fig = plt.figure()
-    plt.title(title)
+    # plt.title(title)
     plt.xlabel("Time")
     plt.ylabel("Memory [Gb]")
-    rawjobs,_ = get_pod_usage_on_nodes_dict(data)
+    plt.ylim(0, 450)
+    rawjobs, _ = get_pod_usage_on_nodes_dict(data)
     color_dict = {"zone2": "b", "zone3": "y", "zone4": "g", "zone5": "r"}
     t = get_node_time(data)
     # print("TIME", t)
@@ -82,7 +83,7 @@ def init_plot_dict(title, zones):
         fig, axs = plt.subplots(1, len(zones), sharex=True)
     fig.set_figheight(8)
     fig.set_figwidth(18)
-    fig.suptitle(f"Pod memories ({title})")
+    # fig.suptitle(f"Pod memories ({title})")
 
     fig.text(0.5, 0.04, "Time", ha="center")
     fig.text(0.04, 0.5, "Memory [Gb]", va="center", rotation="vertical")
@@ -92,6 +93,7 @@ def init_plot_dict(title, zones):
             axisdict[z] = axs[int(i / 2), int(i % 2)]
         else:
             axs[i].set_title(z)
+            axs[i].set_ylim([0, 450])
             axisdict[z] = axs[i]
             axisdict[z].set_prop_cycle(color=colors)
     return fig, axisdict

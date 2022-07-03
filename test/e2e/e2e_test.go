@@ -95,3 +95,4 @@
 // 	output := stdout.String()
 // 	assert.Contains(t, output, "Queue 0")
 // }
+package e2e
