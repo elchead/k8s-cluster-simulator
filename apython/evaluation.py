@@ -212,5 +212,6 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
 
         t = title.replace(" ", "_")
         plt.savefig(f"pod_mem_{t}", dpi=dpi, bbox_inches="tight")
+        plt.savefig(f"pod_mem_{t}" + ".pgf", dpi=dpi, bbox_inches="tight")
         # plt.savefig("graph.pdf")
 

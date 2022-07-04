@@ -4,6 +4,7 @@ from job import *
 
 from matplotlib.cm import get_cmap
 from matplotlib.pyplot import cm
+import matplotlib
 
 
 # if need more colors use: https://stackoverflow.com/a/25730396/10531075
@@ -13,12 +14,19 @@ colors = cmap.colors
 
 dpi = 200
 
+latex = True
+if latex:
+    matplotlib.use("pgf")
+    matplotlib.rcParams.update(
+        {"pgf.texsystem": "pdflatex", "font.family": "serif", "text.usetex": True, "pgf.rcfonts": False,}
+    )
+
 
 def plot_node_usage_with_mig_markers(title, data, zones):
     fig = plt.figure()
     # plt.title(title)
     plt.xlabel("Time")
-    plt.ylabel("Memory [Gb]")
+    plt.ylabel("Memory [GB]")
     plt.ylim(0, 450)
     rawjobs, _ = get_pod_usage_on_nodes_dict(data)
     color_dict = {"zone2": "b", "zone3": "y", "zone4": "g", "zone5": "r"}
@@ -49,7 +57,7 @@ def plot_node_usage_with_mig_markers(title, data, zones):
     plt.legend(by_label.values(), by_label.keys())
     # plt.legend()
     plt.savefig(title.replace(" ", "_"), dpi=dpi)
-
+    plt.savefig(title.replace(" ", "_") + ".pgf", dpi=dpi)
     # plt.figure()
     # plt.title("Slope " + title)
     # for zone in zones:
@@ -64,11 +72,13 @@ def plot_node_usage(title, data, zones):
     plt.figure()
     plt.title(title)
     plt.xlabel("Time")
-    plt.ylabel("Memory [Gb]")
+    plt.ylabel("Memory [GB]")
     for zone in zones:
         plt.plot(get_zone_memory(data, zone), label=zone)
     plt.legend()
     plt.savefig(title.replace(" ", "_"), dpi=dpi)
+    if latex:
+        plt.savefig(title.replace(" ", "_") + ".pgf", dpi=dpi)
 
 
 def init_plot_dict(title, zones):
@@ -80,13 +90,13 @@ def init_plot_dict(title, zones):
     if len(zones) > 3:
         fig, axs = plt.subplots(2, len(zones) - 2, sharex=True, sharey=True)
     else:
-        fig, axs = plt.subplots(1, len(zones), sharex=True, sharey=True)
-    fig.set_figheight(8)
-    fig.set_figwidth(18)
+        fig, axs = plt.subplots(len(zones), 1, sharex=True, sharey=True)
+    fig.set_figheight(6)
+    fig.set_figwidth(6)
     # fig.suptitle(f"Pod memories ({title})")
 
     fig.text(0.5, 0.04, "Time", ha="center")
-    fig.text(0.04, 0.5, "Memory [Gb]", va="center", rotation="vertical")
+    fig.text(0.04, 0.5, "Memory [GB]", va="center", rotation="vertical")
     for i, z in enumerate(zones):
         if len(zones) > 3:
             axs[int(i / 2), int(i % 2)].set_title(z)
