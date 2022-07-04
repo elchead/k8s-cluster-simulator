@@ -11,6 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var cpuReq = "5"
+
 type Time interface {
 	Before(u Time) bool
 	After(u Time) bool
@@ -98,7 +100,6 @@ func GetJobSizeFromName(name string) (string, error) {
 
 func CreatePodWithoutResources(podinfo PodMemory) *v1.Pod {
 	simSpec := ""
-	cpu := "8" // s: 5-10; m: 8-10; l:8-10
 	for i, record := range podinfo.Records {
 		var time int
 		if i == 0 {
@@ -111,7 +112,7 @@ func CreatePodWithoutResources(podinfo PodMemory) *v1.Pod {
   resourceUsage:
     cpu: %s
     memory: %d
-`, time, cpu, record.Usage)
+`, time, cpuReq, record.Usage)
 	}
 	return &v1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -155,21 +156,21 @@ func GetJobResourceRequestWithFactor(size string,factor float64) v1.ResourceList
 	switch size {
 	case "s":
 		return v1.ResourceList{
-			"cpu":            resource.MustParse("5"),
+			"cpu":            resource.MustParse(cpuReq),
 			"memory":         resource.MustParse(getFractionalGi(30.,factor)),
 		      }
 	case "m":
 		return 	v1.ResourceList{
-			"cpu":            resource.MustParse("5"), // 5 CPUs are enough according to Jonas. No 8 needed
+			"cpu":            resource.MustParse(cpuReq), // 5 CPUs are enough according to Jonas. No 8 needed
 			"memory":         resource.MustParse(getFractionalGi(80.,factor)),
 		      }
 	case "l": return v1.ResourceList{
-			"cpu":            resource.MustParse("5"),
+			"cpu":            resource.MustParse(cpuReq),
 			"memory":         resource.MustParse(getFractionalGi(130.,factor)),
 		      }
 
 	case "xl": return v1.ResourceList{
-			"cpu":            resource.MustParse("5"),
+			"cpu":            resource.MustParse(cpuReq),
 			"memory":         resource.MustParse("420Gi"),
 		      }
 	default:
