@@ -56,7 +56,7 @@ func TestPodFactory(t *testing.T) {
 	res := podspec.Spec.Containers[0].Resources
 	cpuReq := res.Requests["cpu"]
 	memReq := res.Requests["memory"]
-	assert.Equal(t,"8",cpuReq.String())
+	assert.Equal(t,"5",cpuReq.String())
 	assert.Equal(t,"0",memReq.String())
 }
 
@@ -76,7 +76,7 @@ func TestPodFactorySetMigratedResources(t *testing.T) {
 		podmem.Name = "o10n-worker-m-zx8wp-n5"
 		podspec := sut.NewMigratedPod(podmem)
 		res = podspec.Spec.Containers[0].Resources.Requests["cpu"]
-		assert.Equal(t, "8", res.String())
+		assert.Equal(t, "5", res.String())
 
 		t.Run("sets memory request to migration usage",func(t *testing.T) {
 			reqMem := podspec.Spec.Containers[0].Resources.Requests["memory"]

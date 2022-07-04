@@ -160,16 +160,16 @@ func GetJobResourceRequestWithFactor(size string,factor float64) v1.ResourceList
 		      }
 	case "m":
 		return 	v1.ResourceList{
-			"cpu":            resource.MustParse("8"),
+			"cpu":            resource.MustParse("5"), // 5 CPUs are enough according to Jonas. No 8 needed
 			"memory":         resource.MustParse(getFractionalGi(80.,factor)),
 		      }
 	case "l": return v1.ResourceList{
-			"cpu":            resource.MustParse("8"),
+			"cpu":            resource.MustParse("5"),
 			"memory":         resource.MustParse(getFractionalGi(130.,factor)),
 		      }
 
 	case "xl": return v1.ResourceList{
-			"cpu":            resource.MustParse("8"),
+			"cpu":            resource.MustParse("5"),
 			"memory":         resource.MustParse("420Gi"),
 		      }
 	default:
