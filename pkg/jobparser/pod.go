@@ -28,9 +28,9 @@ func NewPodFactory(requestFactor float64) PodFactory {
 
 func (f PodFactory)  New(podinfo PodMemory) *v1.Pod {
 	if f.SetResources {
-		return CreatePod(podinfo,f.RequestFactor)
+		return CreatePodWithLimitsAndReq(podinfo,f.RequestFactor)
 	} else {
-		return CreatePodWithoutResources(podinfo)
+		return CreatePodWithLimitsAndReq(podinfo,0.)
 	}
 }
 
@@ -47,16 +47,8 @@ func (f PodFactory)  NewMigratedPodToNode(podinfo PodMemory) *v1.Pod {
 }
 
 func (f PodFactory)  NewWithResources(podinfo PodMemory,memSize string) *v1.Pod {
-	pod := CreatePodWithoutResources(podinfo)
-	pod.Spec = v1.PodSpec{
-		Containers: []v1.Container{
-			{
-				Name:  "worker",
-				Image: "worker-image",
-				Resources: GetPodRequest(memSize),
-			},
-		},
-	}
+	pod := CreatePodWithLimitsAndReq(podinfo,0.) //f.New(podinfo)//CreatePodWithoutResources(podinfo)
+	pod.Spec.Containers[0].Resources.Requests["memory"] = resource.MustParse(memSize)
 	return pod
 }
 
@@ -132,10 +124,10 @@ func CreatePodWithoutResources(podinfo PodMemory) *v1.Pod {
 	}
 }
 
-func CreatePod(podinfo PodMemory,requestFactor float64) *v1.Pod {
+func CreatePodWithLimitsAndReq(podinfo PodMemory,memRequestFactor float64) *v1.Pod {
 	size,err := GetJobSizeFromName(podinfo.Name)
 	if err != nil {
-		log.L.Info("Setting job size to s since:",err)
+		log.L.Info("Setting job size to s since: ",err)
 		size = "s"
 	}
 	pod := CreatePodWithoutResources(podinfo)
@@ -144,7 +136,7 @@ func CreatePod(podinfo PodMemory,requestFactor float64) *v1.Pod {
 			{
 				Name:  "worker",
 				Image: "worker-image",
-				Resources: GetJobResourcesWithRequest(GetJobResourceRequestWithFactor(size,requestFactor)),
+				Resources: GetJobResourcesWithRequest(GetJobResourceRequestWithFactor(size,memRequestFactor)),
 			},
 		},
 	}
@@ -186,6 +178,7 @@ func getFractionalGi(amount,factor float64) string {
 }
 
 func GetJobResourceLimit() v1.ResourceList {
+	// cannot set limit in practice because Kubernetes implicitly sets request to limit if no request is specified https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/#what-if-you-specify-a-container-s-limit-but-not-its-request // however simulator does not enforce thiss
 	return v1.ResourceList{
 		"cpu":            resource.MustParse("10"),
 		"memory":         resource.MustParse("430Gi"),

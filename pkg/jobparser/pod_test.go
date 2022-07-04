@@ -53,15 +53,36 @@ func TestPodFactory(t *testing.T) {
 
 	podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: time.Now(), Usage: 1e9}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e2}}}
 	podspec := sut.New(podmem)
-	assert.Empty(t,podspec.Spec.Containers)
+	res := podspec.Spec.Containers[0].Resources
+	cpuReq := res.Requests["cpu"]
+	memReq := res.Requests["memory"]
+	assert.Equal(t,"8",cpuReq.String())
+	assert.Equal(t,"0",memReq.String())
 }
 
 func TestPodFactorySetMigratedResources(t *testing.T) {
-	podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: time.Now(), Usage: 2e2}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e5}}}
 	
 	sut := PodFactory{SetResources: false}
 	podspec := sut.NewMigratedPod(podmem)
-	assert.NotEmpty(t,podspec.Spec.Containers[0].Resources.Requests["memory"])
+	
+	t.Run("correct cpu request for job size", func(t *testing.T) {
+		podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: time.Now(), Usage: 2e2}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e5}}}
+		
+		podmem.Name = "o10n-worker-s-zx8wp-n5"
+		podspec = sut.NewMigratedPod(podmem)
+		res := podspec.Spec.Containers[0].Resources.Requests["cpu"]
+		assert.Equal(t, "5", res.String())
+		
+		podmem.Name = "o10n-worker-m-zx8wp-n5"
+		podspec := sut.NewMigratedPod(podmem)
+		res = podspec.Spec.Containers[0].Resources.Requests["cpu"]
+		assert.Equal(t, "8", res.String())
+
+		t.Run("sets memory request to migration usage",func(t *testing.T) {
+			reqMem := podspec.Spec.Containers[0].Resources.Requests["memory"]
+			assert.Equal(t,"200",reqMem.String())
+		})
+	})
 }
 
 func TestPodFactoryWithResources(t *testing.T) {
@@ -87,7 +108,7 @@ func TestGetJobSizeFromName(t *testing.T) {
 
 func TestAssignResourcesFromPodName(t *testing.T) {
 	podmem := PodMemory{Name: "o10n-worker-m-zx8wp-n5", Records: []Record{{Time: time.Now(), Usage: 1e9}, {Time: time.Now().Add(2 * time.Minute), Usage: 1e2}}}
-	podspec := CreatePod(podmem,1.)
+	podspec := CreatePodWithLimitsAndReq(podmem,1.)
 	memory := podspec.Spec.Containers[0].Resources.Requests["memory"]
 	expect := GetJobResources("m").Requests["memory"]
 	assert.Equal(t,expect.String(), memory.String())
