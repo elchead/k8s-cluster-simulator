@@ -41,7 +41,7 @@ func parse(records [][]string) []PodMemory {
 				log.Fatal("Failed to parse time:", line[0], err)
 			}
 			for podIdx, strmem := range line[1:] {
-				mem, _ := strconv.ParseFloat(strmem, 64)
+				mem, _ := strconv.ParseInt(strmem,10, 64)
 				res[podIdx].Records = append(res[podIdx].Records, Record{Time: time, Usage: mem})
 			}
 		}

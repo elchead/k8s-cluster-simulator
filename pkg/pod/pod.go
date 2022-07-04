@@ -155,14 +155,14 @@ func (pod *Pod) ResourceUsage(clock clock.Clock) v1.ResourceList {
 	} else {
 		executedSeconds = pod.freezeSeconds
 	}
+	phaseDurationAcc := int32(0)
 	for _, phase := range pod.spec {
-		phaseDurationAcc := phase.seconds
+		phaseDurationAcc += phase.seconds
 		if executedSeconds <= phaseDurationAcc {
 			return phase.resourceUsage
 		}
 	}
-
-	// log.L.Panic("Unreachablle code in pod.ResourceUsage()",executedSeconds,pod.spec)
+	log.L.Panic("Unreachable code in pod.ResourceUsage()",executedSeconds,pod.spec)
 	return v1.ResourceList{}
 }
 

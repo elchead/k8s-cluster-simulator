@@ -36,7 +36,7 @@ func (f PodFactory)  New(podinfo PodMemory) *v1.Pod {
 
 func (f PodFactory)  NewMigratedPod(podinfo PodMemory) *v1.Pod {
 	// TODO set parameter for increase
-	return f.NewWithResources(podinfo,fmt.Sprintf(`%f`,1. *podinfo.Records[0].Usage))
+	return f.NewWithResources(podinfo,fmt.Sprintf(`%d`,1. *podinfo.Records[0].Usage))
 }
 
 func (f PodFactory)  NewMigratedPodToNode(podinfo PodMemory) *v1.Pod {
@@ -99,14 +99,18 @@ func GetJobSizeFromName(name string) (string, error) {
 func CreatePodWithoutResources(podinfo PodMemory) *v1.Pod {
 	simSpec := ""
 	cpu := "8" // s: 5-10; m: 8-10; l:8-10
-	startTime := podinfo.Records[0].Time
-	for _, record := range podinfo.Records {
-		time := record.Time.Sub(startTime).Seconds()
+	for i, record := range podinfo.Records {
+		var time int
+		if i == 0 {
+			time = 0
+		} else {
+			time = int(record.Time.Sub(podinfo.Records[i-1].Time).Seconds()) 
+		}
 		simSpec += fmt.Sprintf(`
-- seconds: %f
+- seconds: %d
   resourceUsage:
     cpu: %s
-    memory: %f
+    memory: %d
 `, time, cpu, record.Usage)
 	}
 	return &v1.Pod{
@@ -178,11 +182,11 @@ func getFractionalGi(amount,factor float64) string {
 }
 
 func GetJobResourceLimit() v1.ResourceList {
-	// cannot set limit in practice because Kubernetes implicitly sets request to limit if no request is specified https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/#what-if-you-specify-a-container-s-limit-but-not-its-request // however simulator does not enforce thiss
-	return v1.ResourceList{
-		"cpu":            resource.MustParse("10"),
-		"memory":         resource.MustParse("430Gi"),
-	      }
+	// cannot set limit in practice because Kubernetes implicitly sets request to limit if no request is specified https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/#what-if-you-specify-a-container-s-limit-but-not-its-request
+	return v1.ResourceList{ }
+	// 	"cpu":            resource.MustParse("10"),
+	// 	"memory":         resource.MustParse("430Gi"),
+	//       }
 }
 
 func GetJobResources(size string) v1.ResourceRequirements {

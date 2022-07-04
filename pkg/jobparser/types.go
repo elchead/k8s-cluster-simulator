@@ -31,7 +31,7 @@ func (p *PodMemory) StartMigration() {
 
 type Record struct {
 	Time  time.Time
-	Usage float64
+	Usage int64
 }
 
 func GetJob(name string,jobs []PodMemory) *PodMemory {  
