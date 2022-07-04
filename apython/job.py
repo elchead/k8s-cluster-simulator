@@ -9,6 +9,7 @@ maxRestarts = 10
 
 Migration_times = defaultdict(list)
 
+slope_mig = 3.127
 
 def set_migration_times(file) -> "dict[str, int]":
     pattern = "MigrationTime"
@@ -24,7 +25,7 @@ def set_migration_times(file) -> "dict[str, int]":
 
 
 def get_migration_time(gbSz: float):
-    return math.ceil(3.3506 * gbSz)
+    return math.ceil(slope_mig * gbSz)
 
 
 def create_jobs_from_dict(job_node_dict):

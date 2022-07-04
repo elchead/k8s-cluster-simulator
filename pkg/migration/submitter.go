@@ -25,7 +25,7 @@ type ControllerI interface {
 }
 
 func GetMigrationTime(gbSz float64) time.Duration {
-	return time.Duration(math.Ceil(3.3506*gbSz))*time.Second
+	return time.Duration(math.Ceil(3.127*gbSz))*time.Second
 }
 
 func NewConcurrentMigrationChecker() *concurrentMigrationChecker {
