@@ -50,14 +50,14 @@ def plot_node_usage_with_mig_markers(title, data, zones):
     # plt.legend()
     plt.savefig(title.replace(" ", "_"), dpi=dpi)
 
-    plt.figure()
-    plt.title("Slope " + title)
-    for zone in zones:
-        mem = get_zone_memory(data, zone)
-        slope = np.diff(mem)
-        plt.plot(slope, label=zone, c=color_dict[zone])
-    plt.legend(by_label.values(), by_label.keys())
-    plt.savefig("slope_" + title.replace(" ", "_"), dpi=dpi)
+    # plt.figure()
+    # plt.title("Slope " + title)
+    # for zone in zones:
+    #     mem = get_zone_memory(data, zone)
+    #     slope = np.diff(mem)
+    #     plt.plot(slope, label=zone, c=color_dict[zone])
+    # plt.legend(by_label.values(), by_label.keys())
+    # plt.savefig("slope_" + title.replace(" ", "_"), dpi=dpi)
 
 
 def plot_node_usage(title, data, zones):
@@ -78,9 +78,9 @@ def init_plot_dict(title, zones):
     fig = None
     axs = []
     if len(zones) > 3:
-        fig, axs = plt.subplots(2, len(zones) - 2, sharex=True)
+        fig, axs = plt.subplots(2, len(zones) - 2, sharex=True, sharey=True)
     else:
-        fig, axs = plt.subplots(1, len(zones), sharex=True)
+        fig, axs = plt.subplots(1, len(zones), sharex=True, sharey=True)
     fig.set_figheight(8)
     fig.set_figwidth(18)
     # fig.suptitle(f"Pod memories ({title})")
@@ -93,7 +93,7 @@ def init_plot_dict(title, zones):
             axisdict[z] = axs[int(i / 2), int(i % 2)]
         else:
             axs[i].set_title(z)
-            axs[i].set_ylim([0, 450])
+            # axs[i].set_ylim([0, 450])
             axisdict[z] = axs[i]
             axisdict[z].set_prop_cycle(color=colors)
     return fig, axisdict
