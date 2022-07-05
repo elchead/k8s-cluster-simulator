@@ -97,7 +97,7 @@ func TestPodSpecFromPodMemory(t *testing.T) {
 	now := time.Now()
 	podmem := PodMemory{Name: "w1", Records: []Record{{Time: now, Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 1e2}}}
 	podspec := CreatePodWithoutResources(podmem)
-	assert.Equal(t, "\n- seconds: 0.000000\n  resourceUsage:\n    cpu: 8\n    memory: 1000000000.000000\n\n- seconds: 120.000000\n  resourceUsage:\n    cpu: 8\n    memory: 100.000000\n", podspec.Annotations["simSpec"])
+	assert.Equal(t, "\n- seconds: 0\n  resourceUsage:\n    cpu: 5\n    memory: 1000000000\n\n- seconds: 120\n  resourceUsage:\n    cpu: 5\n    memory: 100\n", podspec.Annotations["simSpec"])
 }
 
 func TestGetJobSizeFromName(t *testing.T) {
@@ -178,21 +178,21 @@ func TestSetPodResources(t *testing.T) {
 	})
 	t.Run("get M size", func(t *testing.T) {
 		resourceM :=v1.ResourceList{
-			"cpu":            resource.MustParse("8"),
+			"cpu":            resource.MustParse("5"),
 			"memory":         resource.MustParse("80Gi"),
 		      }
 		assert.Equal(t,resourceM,GetJobResourceRequest("m"))	
 	})
 	t.Run("get L size", func(t *testing.T) {
 		resource :=v1.ResourceList{
-			"cpu":            resource.MustParse("8"),
+			"cpu":            resource.MustParse("5"),
 			"memory":         resource.MustParse("130Gi"),
 		      }
 		assert.Equal(t,resource,GetJobResourceRequest("l"))	
 	})
 	t.Run("get XL size", func(t *testing.T) {
 		resource :=v1.ResourceList{
-			"cpu":            resource.MustParse("8"),
+			"cpu":            resource.MustParse("5"),
 			"memory":         resource.MustParse("420Gi"),
 		      }
 		assert.Equal(t,resource,GetJobResourceRequest("xl"))	

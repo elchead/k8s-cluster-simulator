@@ -9,10 +9,13 @@ import (
 	"github.com/elchead/k8s-cluster-simulator/pkg/migration"
 	"github.com/elchead/k8s-cluster-simulator/pkg/submitter"
 	cmigration "github.com/elchead/k8s-migration-controller/pkg/migration"
+	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
+const MigrationTime = 5 * time.Minute
+const BackoffInterval = 45 * time.Second
 
 var now = time.Now()
 var clockNow = clock.NewClock(now)
@@ -65,7 +68,7 @@ func (suite *MigrationSuite) TestMigrateMultipleJobs() {
 	})
 	
 	suite.Run("call migration controller again after migration + backoff and migrate new job", func() {
-		afterMigration := clockNow.Add(migration.MigrationTime+migration.BackoffInterval)
+		afterMigration := clockNow.Add(MigrationTime+BackoffInterval)
 		sut.Submit(afterMigration, nil, nil)
 		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations", 2)
 		assertJobMigratedAfterTime(suite.T(),afterMigration,sut,"mj1")
@@ -98,14 +101,14 @@ func (suite *MigrationSuite) TestBackoffIntervalAfterMigration() {
 	controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",2)
 
 	suite.Run("do not call controller before backoff interval", func(){
-		migrationTime := migration.GetMigrationTime(10)
+		migrationTime := monitoring.GetMigrationTime(10)
 		beforeBackOff := clockNow.Add(migrationTime + 20 * time.Second)
 		sut.Submit(beforeBackOff,nil, nil)	
 		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",2)
 	})
 
 	suite.Run("call controller after backoff", func(){
-		afterBackOff := clockNow.Add(migration.MigrationTime + migration.BackoffInterval)
+		afterBackOff := clockNow.Add(MigrationTime + BackoffInterval)
 		sut.Submit(afterBackOff,nil, nil)	
 		controllerStub.AssertNumberOfCalls(suite.T(), "GetMigrations",3)	
 	})
@@ -162,7 +165,7 @@ func assertNoPodEvent(t *testing.T, events []submitter.Event) {
 }
 
 func assertJobMigratedAfterTime(t testing.TB, submissionTime clock.Clock, sut *migration.MigrationSubmitter, migratedPodName string) []submitter.Event {
-	afterMigration := submissionTime.Add(migration.MigrationTime)
+	afterMigration := submissionTime.Add(MigrationTime)
 	events, err := sut.Submit(afterMigration, nil, nil)
 	assert.NoError(t, err)
 	assertContainsSubmitMigrationPodEvent(t, events, migratedPodName)
@@ -221,40 +224,3 @@ func (c *ControllerStub) GetMigrations() (migrations []cmigration.MigrationCmd, 
 	return args.Get(0).([]cmigration.MigrationCmd), args.Error(1)
 }
 
-func TestCheckerMigrationProcess(t *testing.T) {
-	sut := migration.MigrationChecker{}
-	t.Run("not ready during migration", func(t *testing.T){
-		sut.StartMigration(clockNow)
-		assert.False(t,sut.IsReady(clockNow.Add(migration.BackoffInterval)))
-	})
-	t.Run("not ready before backoff", func(t *testing.T){
-		assert.False(t,sut.IsReady(clockNow.Add(1*time.Second)))
-	})
-	t.Run("ready after backoff", func(t *testing.T){
-		assert.True(t,sut.IsReady(clockNow.Add(migration.MigrationTime + migration.BackoffInterval)))
-	})
-}
-
-func TestCheckerConcurrentMigration(t *testing.T) {
-	sut := migration.NewConcurrentMigrationChecker()
-	now := clock.NewClock(time.Now())
-	sut.StartMigration(now,10.,"pod1")
-	assert.True(t,sut.IsReady(now.Add(1* time.Second)))
-	end := sut.GetMigrationFinishTime("pod1")
-	migrationTime := end.Sub(now)
-	sut.StartMigration(now,20.,"pod2")
-	assertTimeRoughlyEqual(t,now.Add(3*migrationTime),sut.GetMigrationFinishTime("pod2"))
-	t.Run("much later migration starts much later",func(t *testing.T){
-		later := now.Add(5*time.Hour)
-		sut.StartMigration(later,10.,"pod3")
-		assertTimeRoughlyEqual(t,later.Add(1*migrationTime),sut.GetMigrationFinishTime("pod3"))
-	})
-}
-
-func assertTimeRoughlyEqual(t testing.TB,time1 clock.Clock, time2 clock.Clock) {
-	assert.Equal(t,time1.ToMetaV1().Time.Round(1*time.Second),time2.ToMetaV1().Time.Round(1*time.Second))	
-}
-
-func TestGetMigrationTime(t *testing.T) {
-	assert.Equal(t,168*time.Second,migration.GetMigrationTime(50))
-}

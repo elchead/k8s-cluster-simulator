@@ -14,7 +14,7 @@ func TestParseJson(t *testing.T) {
 	jobs, err := jobparser.ParsePodMemoriesFromJson(data)
 	assert.NoError(t, err)
 	assert.Equal(t, jobs[0].Name, "o10n-worker-l-jbmbp-qsjc6")
-	assert.Equal(t, jobs[0].Records[1].Usage, float64(32589617152))
+	assert.Equal(t, jobs[0].Records[1].Usage, int64(32589617152))
 	assert.Equal(t, jobs[0].Records[1].Time, time.Unix(int64(1652248865),0))
 
 	assert.Equal(t, jobs[0].StartAt, time.Unix(int64(1652248860),0))
