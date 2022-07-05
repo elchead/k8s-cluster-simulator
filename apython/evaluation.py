@@ -166,6 +166,7 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
                 "fromto": fromto,
                 "migration_duration": Migration_times[jobname],  # job.get_migration_duration(),
                 "migration_percentage": job.get_migration_duration() / job.runtime * 100,
+                "job_runtime": job.runtime,
                 "job_progress_percentage": migtimes,
             }
             print(json.dumps(miginfo))

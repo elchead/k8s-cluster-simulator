@@ -118,7 +118,7 @@ func (pod *Pod) Metrics(clock clock.Clock) Metrics {
 		ResourceRequest: pod.TotalResourceRequests(),
 		ResourceLimit:   pod.TotalResourceLimits(),
 		ResourceUsage:   pod.ResourceUsage(clock),
-		Runtime: pod.spec[len(pod.spec)-1].seconds,
+		Runtime:         pod.totalRuntimeSeconds(),
 		BoundAt:         pod.boundAt,
 		Node:            pod.node,
 		ExecutedSeconds: int32(pod.executedDuration(clock).Seconds()),
@@ -310,14 +310,17 @@ func (pod *Pod) executedDuration(clock clock.Clock) time.Duration {
 		return 0
 	}
 }
-
-// totalExecutionDuration returns the total execution duration of this Pod.
-func (pod *Pod) totalExecutionDuration() time.Duration {
+func (pod *Pod) totalRuntimeSeconds() int32 {
 	phaseSecondsTotal := int32(0)
 	for _, phase := range pod.spec {
 		phaseSecondsTotal += phase.seconds
 	}
-	return time.Duration(phaseSecondsTotal) * time.Second
+	return phaseSecondsTotal
+
+}
+// totalExecutionDuration returns the total execution duration of this Pod.
+func (pod *Pod) totalExecutionDuration() time.Duration {
+	return time.Duration(pod.totalRuntimeSeconds()) * time.Second
 }
 
 // finishAt returns the clock at which this Pod will finish spontaneously.
