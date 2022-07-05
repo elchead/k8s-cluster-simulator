@@ -20,7 +20,7 @@ from parsing import *
 plt.figure()
 plt.title("with migration")
 plt.xlabel("Time")
-plt.ylabel("Memory [Gb]")
+plt.ylabel("Memory [GB]")
 fname = "../m-mig.log"
 data = [json.loads(line) for line in open(fname, "r")]
 t = get_node_time(data)
