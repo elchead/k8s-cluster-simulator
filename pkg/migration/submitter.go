@@ -32,11 +32,14 @@ func (m *MigrationSubmitter) Submit(
 	met metrics.Metrics) ([]submitter.Event, error) {
 	var freezevents []submitter.Event
 	if m.checker.IsReady(currentTime) {
-		migrations, err := m.controller.GetMigrations()
-		if err != nil {
-			return []submitter.Event{}, errors.Wrap(err, "migrator failed")
+		migrations,migerr := m.controller.GetMigrations()
+		var nodeErr *monitoring.NodeFullError
+		if migerr!=nil && !errors.As(migerr,&nodeErr) {
+			return []submitter.Event{}, errors.Wrap(migerr, "migrator failed")
+		} else if errors.As(migerr,&nodeErr){
+			log.L.Info("Node full error: ", migerr.Error())
 		}
-		err = m.startMigrations(migrations, currentTime)
+		err := m.startMigrations(migrations, currentTime)
 		if err != nil {
 			return []submitter.Event{}, errors.Wrap(err, "failed to start migration")
 		}

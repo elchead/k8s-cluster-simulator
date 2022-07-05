@@ -22,6 +22,17 @@ var clockNow = clock.NewClock(now)
 var endTime = now.Add(30 * time.Minute)
 var jobs  = []jobparser.PodMemory{{Name: "j1", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}, {Name: "j2", StartAt: now, Records: []jobparser.Record{{Time: now, Usage: 100.}}}}
 
+// error printing is used to track need for node provisioning. But Submit error causes fatal error
+func TestSubmitWithNodeFullError(t *testing.T) {
+	controllerStub := new(ControllerStub)
+	controllerStub.On("GetMigrations").Return([]cmigration.MigrationCmd{{Pod:"default/j1",Usage:20}}, &monitoring.NodeFullError{})
+	sut := migration.NewSubmitterWithJobsWithEndTime(controllerStub,jobs,endTime) 
+	events,err := sut.Submit(clockNow, nil, nil)	
+	assert.NoError(t, err)
+	assertNoPodEvent(t, events)
+	assert.NotEmpty(t,events)
+}
+
 type MigrationSuite struct {
 	suite.Suite
 	jobs []jobparser.PodMemory

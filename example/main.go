@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"math/rand"
 	"os"
 	"os/signal"
 	"strconv"
@@ -54,6 +55,7 @@ var requestPolicy string
 var useMigrator bool
 var nodeFreeThreshold float64
 var requestFactor float64
+var randSeed int64
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&podDataFile, "file", "./pods_760.json", "path to pod data")
@@ -64,6 +66,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
 	rootCmd.PersistentFlags().Float64Var(&nodeFreeThreshold, "threshold", 45., "node free threshold in % (default 45.)")
 	rootCmd.PersistentFlags().Float64Var(&requestFactor, "requestFactor", 0., "fraction of job sizing request as decimal (default 0.)")
+	rootCmd.PersistentFlags().Int64Var(&randSeed, "seed", 0, "random seed (default 0)")
 }
 
 var rootCmd = &cobra.Command{
@@ -76,6 +79,7 @@ var rootCmd = &cobra.Command{
 		} else {
 			requestFactor = 1. 
 		}
+		rand.Seed(randSeed)
 
 		ctx := newInterruptableContext()
 		// 1. Create a KubeSim with a pod queue and a scheduler.

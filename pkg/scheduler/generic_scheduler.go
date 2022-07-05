@@ -17,6 +17,8 @@ package scheduler
 import (
 	"errors"
 	"fmt"
+	"math/rand"
+	"sort"
 
 	"github.com/containerd/containerd/log"
 	v1 "k8s.io/api/core/v1"
@@ -170,12 +172,12 @@ func (sched *GenericScheduler) scheduleOne(
 	if len(nodes) == 0 {
 		return result, core.ErrNoNodesAvailable
 	}
-
 	// Filter out nodes that cannot accommodate the pod.
 	nodesFiltered, failedPredicateMap, err := sched.filter(pod, nodes, nodeInfoMap, podQueue)
 	if err != nil {
 		return result, err
 	}
+	randomizeNodeOrder(nodesFiltered)
 
 	switch len(nodesFiltered) {
 	case 0: // The pod doesn't fit in any node.
@@ -206,6 +208,13 @@ func (sched *GenericScheduler) scheduleOne(
 		EvaluatedNodes: len(nodesFiltered) + len(failedPredicateMap),
 		FeasibleNodes:  len(nodesFiltered),
 	}, err
+}
+
+func randomizeNodeOrder(nodesFiltered []*v1.Node) {
+	sort.SliceStable(nodesFiltered, func(i, j int) bool {
+		return nodesFiltered[i].Name < nodesFiltered[j].Name
+	})
+	rand.Shuffle(len(nodesFiltered), func(i, j int) { nodesFiltered[i], nodesFiltered[j] = nodesFiltered[j], nodesFiltered[i] })
 }
 
 func (sched *GenericScheduler) filter(
