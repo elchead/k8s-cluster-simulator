@@ -37,7 +37,7 @@ func (m *MigrationSubmitter) Submit(
 		if migerr!=nil && !errors.As(migerr,&nodeErr) {
 			return []submitter.Event{}, errors.Wrap(migerr, "migrator failed")
 		} else if errors.As(migerr,&nodeErr){
-			log.L.Info("Node full error: ", migerr.Error())
+			log.L.Info("Provision new node: ", migerr.Error())
 		}
 		err := m.startMigrations(migrations, currentTime)
 		if err != nil {
@@ -103,7 +103,7 @@ func (m *MigrationSubmitter) startMigrations(migrations []migration.MigrationCmd
 		finishTime :=  m.checker.GetMigrationFinishTime(jobName).ToMetaV1().Time
 		jobparser.UpdateJobForMigration(job,currentTime.ToMetaV1().Time,finishTime)
 		log.L.Debug("push migration to queue:", job.Name, " size ",podsize, " to node ",job.IsMigratingToNode," finishing at ", finishTime)
-		log.L.Infof("MigrationTime %s %.0f", jobName, finishTime.Sub(currentTime.ToMetaV1().Time).Seconds())
+		log.L.Infof("MigrationTime %s %.0f starting %s", jobName, finishTime.Sub(currentTime.ToMetaV1().Time).Seconds(),currentTime)
 		m.queue.Push(job)
 	}
 	return nil
