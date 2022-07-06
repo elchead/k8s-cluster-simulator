@@ -3,11 +3,11 @@ from job import *
 
 
 def test_get_migration_time():
-    assert 168.0 == get_migration_time(50.0)
+    assert 157 == get_migration_time(50.0)
 
 
 def test_poddata_migration():
-    sut = PodData.withdata([10, 20, 30], [50, 40, 50], is_migrated=True)
+    sut = PodData.withdata([10, 20, 30], [50, 40, 50], [], is_migrated=True)
     assert 10 == sut.get_migration_timestamp()
     assert 50 == sut.get_migration_size()
 
@@ -22,32 +22,33 @@ def test_poddata_migration():
 #     assert ([50, 50, 50, 50, 50, 50] == y).all()
 
 
-class TestMigrationTime:
-    job = Job()
-    job.add_pod("owo", "zone2", PodData.withdata([10, 20, 30], [1, 2, 50]))
-    job.add_pod("mowo", "zone2", PodData.withdata([10, 20, 30], [50, 5, 6]))
+# DEPRECATED: using time from sim log (more accurate)
+# class TestMigrationTime:
+#     job = Job()
+#     job.add_pod("owo", "zone2", PodData.withdata([10, 20, 30], [1, 2, 50], []))
+#     job.add_pod("mowo", "zone2", PodData.withdata([10, 20, 30], [50, 5, 6], []))
 
-    def test_get_single_migration_time(self):
-        assert self.job.get_migration_duration() == 168.0
+#     def test_get_single_migration_time(self):
+#         assert self.job.get_migration_duration() == 168.0
 
-    def test_add_pod_migrations(self):
-        self.job.add_pod("mmowo", "zone3", PodData.withdata([10, 20, 30], [100, 5, 6]))
-        assert self.job.get_migration_duration() == 168.0 * 3
+#     def test_add_pod_migrations(self):
+#         self.job.add_pod("mmowo", "zone3", PodData.withdata([10, 20, 30], [100, 5, 6], []))
+#         assert self.job.get_migration_duration() == 168.0 * 3
 
 
 def test_get_job_execution():
     job = Job()
-    job.add_pod("owo", "zone2", PodData.withdata([10, 20, 30], [1, 2, 3]))
-    job.add_pod("mowo", "zone2", PodData.withdata([10, 20, 30], [4, 5, 6]))
+    job.add_pod("owo", "zone2", PodData.withdata([10, 20, 30], [1, 2, 3], []))
+    job.add_pod("mowo", "zone2", PodData.withdata([10, 20, 30], [4, 5, 6], []))
     assert job.get_execution_time() == 60
 
 
 class TestGetPodRuns:
     job = Job()
-    job.add_pod("mowo", "zone3", PodData.withdata([10, 20, 30], [4, 5, 6]))
-    job.add_pod("owo", "zone2", PodData.withdata([10, 20, 30], [1, 2, 3]))
+    job.add_pod("mowo", "zone3", PodData.withdata([10, 20, 30], [4, 5, 6], []))
+    job.add_pod("owo", "zone2", PodData.withdata([10, 20, 30], [1, 2, 3], []))
     job2 = Job()
-    job2.add_pod("oza", "zone2", PodData.withdata([10, 20, 30], [1, 2, 3]))
+    job2.add_pod("oza", "zone2", PodData.withdata([10, 20, 30], [1, 2, 3], []))
     it = tuple(job.get_pod_runs_for_plot())
     it2 = tuple(job2.get_pod_runs_for_plot())
 
