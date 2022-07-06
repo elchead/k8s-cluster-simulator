@@ -20,15 +20,18 @@ def get_provision_requests(file) -> List[str]:
 
 
 def evaluate_sim(title, plot, fname, nbr_jobs=50):
-    print(f"Evaluate {title}")
+    # print(f"Evaluate {title}")
     f = open(fname, "r")
     data, jobs = load_data(f)
+
+    provisions = []
     try:
         with open("mig-sim.log") as f:
             set_migration_times(f)
+            provisions = evaluate_provisions(f)
     except Exception as e:
         print("Could not evaluate migration times", e)
-    evaluate_jobs(zones, data, jobs, title, plot=plot, nbr_jobs=nbr_jobs)
+    evaluate_jobs(zones, data, jobs, title, provisions, plot=plot, nbr_jobs=nbr_jobs)
 
     # print("other")
     # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[0].memory)
@@ -40,18 +43,19 @@ def evaluate_sim(title, plot, fname, nbr_jobs=50):
     if plot:
         plot_node_usage_with_mig_markers(title, data, zones)
         # plot_node_usage(title, data, zones)
-    try:
-        with open("mig-sim.log") as f:
-            evaluate_provisions(f)
-    except Exception as e:
-        print("Could not evaluate provisions", e)
+    # try:
+    #     with open("mig-sim.log") as f:
+    #         evaluate_provisions(f)
+    # except Exception as e:
+    #     print("Could not evaluate provisions", e)
 
 
 def evaluate_provisions(f):
     provs = get_provision_requests(f)
-    print("Provision requests:", len(provs))
-    for p in provs:
-        print(p, end="")
+    # print("Provision requests:", len(provs))
+    # for p in provs:
+    # print(p, end="")
+    return provs
 
 
 def load_data(f):
@@ -119,7 +123,7 @@ class SimEvaluation:
         return list(self.job_max_mem.items())[:nbr]
 
 
-def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_jobs=None):
+def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=False, nbr_jobs=None):
     res = SimEvaluation()
     total_jobs = len(jobs.values())
     if not nbr_jobs:
@@ -141,16 +145,30 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
     for zone in zones:
         res.set_zone_stats(zone, get_zone_memory(data, zone))
 
-    print("Total jobs:", total_jobs)
-    print("Total #migrations:", res.total_migrations())
-    print("Total job time [s]:", res.job_time())
-    print("Total migration time [s]:", res.migration_time())
     memmean = np.mean(list(res.zone_mem_utilization.values()))
-    print("Mean memory usage [Gb]:", memmean, f"({memmean/450*100}%)")
-    print("Zone mean usage [Gb]:", res.zone_mem_utilization)
-    print("Zone max usage [Gb]:", res.zone_max_utilization)
+    stats = {
+        "total_jobs": total_jobs,
+        "nbr_migrations": res.total_migrations(),
+        "job_time": res.job_time(),
+        "migration_time": res.migration_time(),
+        "mean_memory_usage_gb": memmean,
+        "mean_memory_usage_perc": memmean / 450 * 100,
+        "zone_mean_usage_gb": res.zone_mem_utilization,
+        "zone_max_usage_gb": res.zone_max_utilization,
+        "nbr_provisions": len(provisions),
+        "provisions": provisions,
+    }
+    # print("Total jobs:", total_jobs)
+    # print("Total #migrations:", res.total_migrations())
+    # print("Total job time [s]:", res.job_time())
+    # print("Total migration time [s]:", res.migration_time())
+    # memmean = np.mean(list(res.zone_mem_utilization.values()))
+    # print("Mean memory usage [Gb]:", memmean, f"({memmean/450*100}%)")
+    # print("Zone mean usage [Gb]:", res.zone_mem_utilization)
+    # print("Zone max usage [Gb]:", res.zone_max_utilization)
 
-    print("Migrated pods:")
+    # print("Migrated pods:")
+    migs = []
     top_pods = res.get_top_pods(nbr_jobs)
     for jobname, job in jobs.items():
         if job.nbr_migrations > 0:
@@ -169,7 +187,8 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
                 "job_runtime": job.runtime,
                 "job_progress_percentage": migtimes,
             }
-            print(json.dumps(miginfo))
+            migs.append(miginfo)
+            # print(json.dumps(miginfo))
 
             # OLD PRINT FORMAT
             # fromto = [f"from {job.get_node(n)} to {job.get_node(n+1)}" for n in range(job.nbr_migrations)]
@@ -205,7 +224,11 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, plot=False, nbr_job
                     jobcolors[jobname] = p[0].get_color()
 
                 # axis[zone].set_xticks([])
-    print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
+
+    stats["most_consuming_jobs"] = res.get_top_pods_consumption(nbr_jobs)
+    stats["migrated_pods"] = migs
+    # print("Most consuming jobs:\n", res.get_top_pods_consumption(nbr_jobs))
+    print(json.dumps(stats))
 
     if plot:
         # for z in zones:

@@ -28,9 +28,9 @@ def set_migration_times(file) -> "dict[str, int]":
             duration = int(str_res[4].rstrip('"\n'))
             Migration_durations[job].append(duration)
 
-            time = line.split("starting")[1].strip()
-            time = datetime.strptime(time, "%Y-%m-%d %H:%M:%S %z %Z")
-            Migration_times[job].append(time)
+            # time = line.split("starting")[1].strip()
+            # time = datetime.strptime(time, "%Y-%m-%d %H:%M:%S %z %Z")
+            # Migration_times[job].append(time)
 
 
 def get_migration_time(gbSz: float):
