@@ -2,6 +2,20 @@ from regex import D
 from job import *
 
 
+def test_shift_idx():
+    p = PodData()
+    p.migration_idx = [0]
+    p1 = PodData()
+    p1.migration_idx = [1]
+    p2 = PodData()
+    p2.migration_idx = [2]
+    ls = [p, p1, p2]
+    shift_migration_idx_to_migrating_pod(ls)
+    assert ls[0].migration_idx == [1]
+    assert ls[1].migration_idx == [2]
+    assert ls[2].migration_idx == [2]  ## remains two?
+
+
 def test_get_migration_time():
     assert 157 == get_migration_time(50.0)
 

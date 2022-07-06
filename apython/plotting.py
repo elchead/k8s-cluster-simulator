@@ -6,6 +6,7 @@ from matplotlib.cm import get_cmap
 from matplotlib.pyplot import cm
 import matplotlib
 
+from datetime import datetime, timedelta
 
 # if need more colors use: https://stackoverflow.com/a/25730396/10531075
 name = "tab20"
@@ -46,12 +47,18 @@ def plot_node_usage_with_mig_markers(title, data, zones):
     zone_markers = defaultdict(list)
     for name, pod in rawjobs.items():
         if count_m(name) > 0:
+            prior_pod = "m" * (count_m(name) - 1) + name[count_m(name) :]
+            prior_zone = list(rawjobs[prior_pod].keys())[0]
             for zone, poddata in pod.items():
                 poddata.is_migrated = True
-                zone_markers[zone].append(poddata.t_idx)
                 plt.plot(
-                    t[poddata.t_idx], poddata.get_migration_size(), label=zone, marker="x", c=color_dict[zone],
+                    t[poddata.t_idx] - timedelta(seconds=get_migration_time(poddata.get_migration_size())),
+                    poddata.get_migration_size(),
+                    label=prior_zone,
+                    marker="x",
+                    c=color_dict[prior_zone],
                 )
+                zone_markers[prior_zone].append(poddata.t_idx)
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys())

@@ -4,12 +4,15 @@ import copy
 import numpy as np
 import math
 from date import get_date
+from datetime import datetime
 
 maxRestarts = 10
 
+Migration_durations = defaultdict(list)
 Migration_times = defaultdict(list)
 
 slope_mig = 3.127
+
 
 def set_migration_times(file) -> "dict[str, int]":
     pattern = "MigrationTime"
@@ -20,7 +23,13 @@ def set_migration_times(file) -> "dict[str, int]":
             # print(line)
             str_res = line.split(" ")
             job = str_res[3]
-            time = int(str_res[4].rstrip('"\n'))
+            count = count_m(job)
+            job = job[count:]
+            duration = int(str_res[4].rstrip('"\n'))
+            Migration_durations[job].append(duration)
+
+            time = line.split("starting")[1].strip()
+            time = datetime.strptime(time, "%Y-%m-%d %H:%M:%S %z %Z")
             Migration_times[job].append(time)
 
 
@@ -169,7 +178,7 @@ class Job:
         return sum(self.get_migration_durations())
 
     def get_migration_durations(self) -> "List[int]":
-        return Migration_times[self.name]
+        return Migration_durations[self.name]
         # total = []
         # for poddata in self.node_data:
         #     if poddata:
@@ -205,7 +214,7 @@ def add_migration_idx(p):
     last_restarted_idx = -1
     for prior_idx, data in enumerate(p[1:]):
         if data:
-            # was restarted
+            # then was restarted
             if data.time[0] != 0:
                 data.migration_idx = [0]
                 last_restarted_idx = prior_idx + 1
@@ -213,6 +222,12 @@ def add_migration_idx(p):
         if last_restarted_idx > idx:
             data.migration_idx.append(len(data.memory) - 1)
     return p
+
+
+def shift_migration_idx_to_migrating_pod(p: "List[PodData]"):
+    for prior_idx, data in enumerate(p[1:]):
+        if data and len(data.migration_idx) > 0:
+            p[prior_idx].migration_idx = data.migration_idx
 
 
 def get_pods(stamp):

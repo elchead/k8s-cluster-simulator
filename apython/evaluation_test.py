@@ -2,6 +2,20 @@ import pytest
 from parsing import *
 from unittest.mock import patch, mock_open
 from evaluation import *
+from job import Migration_durations
+from dateutil.parser import parse
+from datetime import datetime
+
+
+# NOT used
+def test_get_mig_time():
+    data = 'time="2022-07-06T07:58:20+02:00" level=info msg="MigrationTime mo10n-worker-l-jq2pn-wq4l6 272 starting 2022-06-09 22:57:10 +0200 CEST'
+    f = open_mockfile(data)
+    set_migration_times(f)
+    assert Migration_durations["o10n-worker-l-jq2pn-wq4l6"] == [272]
+    assert Migration_times["o10n-worker-l-jq2pn-wq4l6"] == [
+        datetime.strptime("2022-06-09 22:57:10 +0200 CEST", "%Y-%m-%d %H:%M:%S %z %Z")
+    ]
 
 
 def open_mockfile(data):
