@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -74,11 +75,13 @@ var rootCmd = &cobra.Command{
 	Short: "k8s-cluster-simulator provides a virtual kubernetes cluster interface for evaluating your scheduler.",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		if useMigrator {
-			requestFactor = 0. // much more usage when no resource set at all! //.1 //.25 too big?
-		} else {
-			requestFactor = 1. 
-		}
+		fmt.Println("reqFactor",requestFactor)
+
+		// if useMigrator {
+		// 	requestFactor = 0. // much more usage when no resource set at all! //.1 //.25 too big?
+		// } else {
+		// 	requestFactor = 1. 
+		// }
 		rand.Seed(randSeed)
 
 		ctx := newInterruptableContext()
