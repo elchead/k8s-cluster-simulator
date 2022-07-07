@@ -131,9 +131,7 @@ var rootCmd = &cobra.Command{
 			migController := monitoring.NewController(requestPolicy, migrationPolicy)
 			checker := monitoring.NewMigrationChecker(checkerType)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory,checker))
-
-
-			unscheduler := &migration.Unscheduler{EndTime:clock.NewClock(endTime),ThresholdDecimal: .2,ReschedulableDistanceDecimal:.15}
+			unscheduler := &migration.Unscheduler{EndTime:clock.NewClock(endTime),ThresholdDecimal: .8,ReschedulableDistanceDecimal:.15}
 			sim.AddSubmitter("NodeUnscheduler", unscheduler)
 		}
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
