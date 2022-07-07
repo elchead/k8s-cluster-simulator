@@ -52,7 +52,10 @@ def evaluate_tables(path, seed):
             req = configls[-1]
             mig = configls[2]
             threshold = int(configls[0][1:])
-            res = read_to_panda(strdata, threshold)
+            try:
+                res = read_to_panda(strdata, threshold)
+            except:
+                print("SEED", seed, "failed", config)
 
             key = f"Requester:{req}; Migrator:{mig}"
             pd[key] = pandas.concat([pd[key], res])
@@ -78,6 +81,24 @@ def evaluate_seed_tables(path, seedmax):
             except:
                 print("SEED", seed, "failed", threshold)
             key = f"Requester:{req}; Migrator:{mig}"
+            pd = pandas.concat([pd, res])
+    # print_table(pd)
+    return pd
+
+
+def evaluate_seed_tables_no_config(path, seedmax):
+    pd = pandas.DataFrame()  # = defaultdict(pandas.DataFrame)
+    # paths = get_subdirs(path)
+    path = pathlib.Path(path)
+    for seed in range(1, seedmax + 1):
+        fpath = path.joinpath(f"{seed}/mig-report.txt")
+        with open(fpath, "r") as f:
+            strdata = f.read()
+            try:
+                res = read_to_panda(strdata, seed)
+            except Exception as e:
+                print(e, "seed", seed, "failed", fpath)
+                res
             pd = pandas.concat([pd, res])
     # print_table(pd)
     return pd
