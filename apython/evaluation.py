@@ -40,9 +40,9 @@ def evaluate_sim(title, plot, fname, nbr_jobs=50):
     # print("1:", vars(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[1]))
 
     # print("----")
-    if plot:
-        plot_node_usage_with_mig_markers(title, data, zones)
-        # plot_node_usage(title, data, zones)
+    # if plot:
+    # plot_node_usage_with_mig_markers(title, data, zones)
+    # plot_node_usage(title, data, zones)
     # try:
     #     with open("mig-sim.log") as f:
     #         evaluate_provisions(f)
@@ -224,6 +224,11 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=Fa
                     jobcolors[jobname] = p[0].get_color()
 
                 # axis[zone].set_xticks([])
+        t = get_node_time(data)
+        for zone in zones:
+            mem = get_zone_memory(data, zone)
+            # axis[zone].plot(t, mem, label=zone)
+            axis[zone].fill_between(t, mem, facecolor="#fad1d0", alpha=0.1)
 
     stats["most_consuming_jobs"] = res.get_top_pods_consumption(nbr_jobs)
     stats["migrated_pods"] = migs
@@ -235,7 +240,8 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=Fa
         #     axis[z].legend()
 
         t = title.replace(" ", "_")
-        plt.savefig(f"pod_mem_{t}", dpi=dpi, bbox_inches="tight")
-        plt.savefig(f"pod_mem_{t}" + ".pgf", dpi=dpi, bbox_inches="tight")
+        # plt.savefig(f"pod_mem_{t}", dpi=dpi, bbox_inches="tight")
+        plt.savefig(f"pod_mem_{t}" + ".pdf", bbox_inches="tight")
+        # plt.savefig(f"pod_mem_{t}" + ".pgf", bbox_inches="tight")
         # plt.savefig("graph.pdf")
 

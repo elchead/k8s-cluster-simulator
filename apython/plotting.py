@@ -15,7 +15,7 @@ colors = cmap.colors
 
 dpi = 200
 
-latex = True
+latex = False
 if latex:
     matplotlib.use("pgf")
     matplotlib.rcParams.update(
@@ -63,8 +63,8 @@ def plot_node_usage_with_mig_markers(title, data, zones):
     by_label = dict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys())
     # plt.legend()
-    plt.savefig(title.replace(" ", "_"), dpi=dpi)
-    plt.savefig(title.replace(" ", "_") + ".pgf", dpi=dpi)
+    plt.savefig(title.replace(" ", "_") + ".pdf")
+    # plt.savefig(title.replace(" ", "_") + ".pgf", dpi=dpi)
     # plt.figure()
     # plt.title("Slope " + title)
     # for zone in zones:
@@ -110,7 +110,7 @@ def init_plot_dict(title, zones):
             axisdict[z] = axs[int(i / 2), int(i % 2)]
         else:
             axs[i].set_title(z)
-            # axs[i].set_ylim([0, 450])
+            axs[i].set_ylim([0, 450])
             axisdict[z] = axs[i]
             axisdict[z].set_prop_cycle(color=colors)
     return fig, axisdict
