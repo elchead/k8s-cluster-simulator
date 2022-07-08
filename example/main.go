@@ -57,6 +57,7 @@ var useMigrator bool
 var nodeFreeThreshold float64
 var requestFactor float64
 var randSeed int64
+var noUnscheduler bool
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&podDataFile, "file", "./pods_760.json", "path to pod data")
@@ -64,6 +65,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&checkerType, "checker", "blocking", "blocking or concurrent")
 	rootCmd.PersistentFlags().StringVar(&migPolicy, "migPolicy", "optimal", "Migration choice policy: optimal,max,big-enough")
 	rootCmd.PersistentFlags().StringVar(&requestPolicy, "reqPolicy", "threshold", "Policy to request memory freeing: threshold,slope")
+	rootCmd.PersistentFlags().BoolVar(&noUnscheduler, "noUnscheduler", false, "use migrator (default true)")
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
 	rootCmd.PersistentFlags().Float64Var(&nodeFreeThreshold, "threshold", 45., "node free threshold in % (default 45.)")
 	rootCmd.PersistentFlags().Float64Var(&requestFactor, "requestFactor", 0., "fraction of job sizing request as decimal (default 0.)")
@@ -131,8 +133,10 @@ var rootCmd = &cobra.Command{
 			migController := monitoring.NewController(requestPolicy, migrationPolicy)
 			checker := monitoring.NewMigrationChecker(checkerType)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory,checker))
-			unscheduler := &migration.Unscheduler{EndTime:clock.NewClock(endTime),ThresholdDecimal: .8,ReschedulableDistanceDecimal:.15}
-			sim.AddSubmitter("NodeUnscheduler", unscheduler)
+			if !noUnscheduler {
+				unscheduler := &migration.Unscheduler{EndTime:clock.NewClock(endTime),ThresholdDecimal: .8,ReschedulableDistanceDecimal:.15}
+				sim.AddSubmitter("NodeUnscheduler", unscheduler)
+			}
 		}
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
 		// 3. Run the main loop of KubeSim.
