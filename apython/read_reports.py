@@ -3,6 +3,7 @@ import pathlib
 import os
 import json
 import pandas
+from pprint import pprint
 
 
 def read_to_panda(strdata, config_name):
@@ -40,6 +41,16 @@ def get_subdirs(dir):
     return [f for f in p.iterdir() if f.is_dir() and f.stem.startswith("t")]
 
 
+def evaluate_migrated_pods(path, seed):
+    paths = get_subdirs(path)
+
+    fpath = f"{path}/{seed}/mig-report.txt"
+    with open(fpath, "r") as f:
+        strdata = f.read()
+        d = json.loads(strdata)
+        pprint(d["migrated_pods"])
+
+
 def evaluate_tables(path, seed):
     pd = defaultdict(pandas.DataFrame)
     paths = get_subdirs(path)
@@ -59,7 +70,6 @@ def evaluate_tables(path, seed):
 
             key = f"Requester:{req}; Migrator:{mig}"
             pd[key] = pandas.concat([pd[key], res])
-    print_table(pd)
     return pd
 
 

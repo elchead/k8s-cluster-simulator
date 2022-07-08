@@ -7,6 +7,7 @@ from matplotlib.pyplot import cm
 import matplotlib
 
 from datetime import datetime, timedelta
+import matplotlib.dates as mdates
 
 # if need more colors use: https://stackoverflow.com/a/25730396/10531075
 name = "tab20"
@@ -15,7 +16,7 @@ colors = cmap.colors
 
 dpi = 200
 
-latex = False
+latex = True
 if latex:
     matplotlib.use("pgf")
     matplotlib.rcParams.update(
@@ -99,10 +100,10 @@ def init_plot_dict(title, zones):
     else:
         fig, axs = plt.subplots(len(zones), 1, sharex=True, sharey=True)
     fig.set_figheight(6)
-    fig.set_figwidth(6)
+    fig.set_figwidth(7)
     # fig.suptitle(f"Pod memories ({title})")
 
-    fig.text(0.5, 0.04, "Time", ha="center")
+    fig.text(0.5, 0.04, "Time [h]", ha="center")
     fig.text(0.04, 0.5, "Memory [GB]", va="center", rotation="vertical")
     for i, z in enumerate(zones):
         if len(zones) > 3:
@@ -111,6 +112,12 @@ def init_plot_dict(title, zones):
         else:
             axs[i].set_title(z)
             axs[i].set_ylim([0, 450])
+            axs[i].yaxis.set_ticks(range(0, 451, 150))
+            # axs[i].xaxis.set_major_locator(mdates.DayLocator(interval=3))  # to get a tick every 15 minutes
+            axs[i].xaxis.set_major_formatter(
+                mdates.DateFormatter("%H")
+                # mdates.ConciseDateFormatter(axs[i].xaxis.get_major_locator())
+            )
             axisdict[z] = axs[i]
             axisdict[z].set_prop_cycle(color=colors)
     return fig, axisdict

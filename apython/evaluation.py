@@ -142,8 +142,14 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=Fa
                 res.set_job_max_mem(jobname, np.max(poddata.memory))
         except Exception as e:
             print(f"Job {job.name} failed. Reason: {e}")
+
+    t = get_node_time(data)
     for zone in zones:
-        res.set_zone_stats(zone, get_zone_memory(data, zone))
+        mem = get_zone_memory(data, zone)
+        res.set_zone_stats(zone, mem)
+        if plot:
+            # axis[zone].plot(t, mem, label=zone)
+            axis[zone].fill_between(t, mem, facecolor="#fad1d0", alpha=0.8)
 
     memmean = np.mean(list(res.zone_mem_utilization.values()))
     stats = {
@@ -224,11 +230,6 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=Fa
                     jobcolors[jobname] = p[0].get_color()
 
                 # axis[zone].set_xticks([])
-        t = get_node_time(data)
-        for zone in zones:
-            mem = get_zone_memory(data, zone)
-            # axis[zone].plot(t, mem, label=zone)
-            axis[zone].fill_between(t, mem, facecolor="#fad1d0", alpha=0.1)
 
     stats["most_consuming_jobs"] = res.get_top_pods_consumption(nbr_jobs)
     stats["migrated_pods"] = migs
@@ -242,6 +243,6 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=Fa
         t = title.replace(" ", "_")
         # plt.savefig(f"pod_mem_{t}", dpi=dpi, bbox_inches="tight")
         plt.savefig(f"pod_mem_{t}" + ".pdf", bbox_inches="tight")
-        # plt.savefig(f"pod_mem_{t}" + ".pgf", bbox_inches="tight")
+        plt.savefig(f"pod_mem_{t}" + ".pgf", bbox_inches="tight")
         # plt.savefig("graph.pdf")
 

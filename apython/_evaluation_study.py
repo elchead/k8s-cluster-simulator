@@ -3,6 +3,9 @@ import numpy as np
 
 path = "/Users/I545428/gh/controller-simulator/evaluation/pods_760"
 path2 = "/Users/I545428/gh/controller-simulator/evaluation/pods_2715"
+
+jobs = [760, 2715]
+jobseeds = [12, 15]
 # ! Job analysis
 # pd = evaluate_tables(path, 8)
 # pd = evaluate_tables(path2, 16)
@@ -73,15 +76,45 @@ def reqfac_impact(job):
         print(f"Request factor {thresh}: {count_failure} failures out of {len(maxs)}\t minimal jobtime: {jtime}")
 
 
-# nomig_dynamic_failure_rate(760, 200)
+# nomig_dynamic_failure_rate(760, 500)
 # reqfac_impact(760)
 # reqfac_impact(2715)
 # combi_req_unsched_rate(760, 20)
 
 # controller config
-job = 760
-pd = evaluate_tables(f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/controller_7_7", 19)
-# for name, value in pd.items():
-#     print(name)
-#     print(value.to_latex())
+job = jobs[0]
+# run combi (unscheduler included in main?)
+# pick one failed scenario from:
+# combi_req_unsched_rate(job, 20)
+seed = jobseeds[0]
+print("---", job)
+# pd = evaluate_tables(f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/controller_7_7", seed)
+# print_table(pd)
+evaluate_migrated_pods(
+    f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/controller_7_7/t15-m-slope-r-threshold", seed
+)
 
+# print("ONLY", job)
+# pdOnly = evaluate_tables(f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/onlycontroller", seed)
+# print_table(pdOnly)
+
+# pd["Max node usage [Gb]"] >
+
+
+# job = 760
+# seed = 12  # changed from 19 to 12
+# print("---", job)
+# pd = evaluate_tables(f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/controller_7_7", seed)
+# print_table(pd)
+# # for name, value in pd.items():
+# #     del value["Job count"]
+# #     del value["Job time"]
+# #     del value["Mean memory usage [Gb]"]
+# #     del value["Mean memory usage [%]"]
+# #     del value["Provision count"]
+# #     print(name)
+# #     print(value.to_latex())
+
+# print("ONLY", job)
+# pd = evaluate_tables(f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/onlycontroller", seed)
+# print_table(pd)
