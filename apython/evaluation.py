@@ -19,14 +19,14 @@ def get_provision_requests(file) -> List[str]:
     return res
 
 
-def evaluate_sim(title, plot, fname, nbr_jobs=50):
+def evaluate_sim(title, plot, fname, nbr_jobs=50, simlog="mig-sim.log"):
     # print(f"Evaluate {title}")
     f = open(fname, "r")
     data, jobs = load_data(f)
 
     provisions = []
     try:
-        with open("mig-sim.log") as f:
+        with open(simlog) as f:
             set_migration_times(f)
             provisions = evaluate_provisions(f)
     except Exception as e:
