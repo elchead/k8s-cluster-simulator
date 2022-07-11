@@ -70,6 +70,9 @@ func (m *MigrationSubmitter) getEventsFromFinishedMigrations(currentTime clock.C
 			job := jobparser.GetJob(nextJob.Name, m.jobs) // jobs are copied in iterator.. need original reference for communication with job deleter
 			jobparser.UpdateJobNameForMigration(job) // update global job reference name only when migration is finished
 			jobparser.UpdateJobNameForMigration(&nextJob) // TODO improve design
+			if job.Name == "mmo10n-worker-l-7qvtp-r7nmj" {
+				log.L.Info("MMON: ", job.Name,job.Records)
+			}
 			pod := m.factory.NewMigratedPodToNode(nextJob)
 			nextJob.FinishedMigration()
 			events = append(events, &submitter.SubmitEvent{Pod: pod})

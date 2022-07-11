@@ -82,7 +82,15 @@ func FilterRecordsBefore(podmem []Record, t time.Time) []Record {
 func UpdateJobForMigration(podinfo *PodMemory, migrationStart,migrationFinish time.Time) {
 
 	podinfo.Records = FilterRecordsBefore(podinfo.Records,migrationStart)
+	migDuration := migrationFinish.Sub(migrationStart)
+	ShiftTimestamps(podinfo.Records,migDuration)
 	podinfo.StartAt = migrationFinish	
+}
+
+func ShiftTimestamps(records []Record, shift time.Duration) {
+	for i, _ := range records {
+		records[i].Time = records[i].Time.Add(shift)
+	}
 }
 
 func UpdateJobNameForMigration(podinfo *PodMemory) {

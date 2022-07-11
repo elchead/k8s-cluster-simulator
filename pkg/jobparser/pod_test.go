@@ -163,6 +163,18 @@ func TestFilterRecords(t *testing.T) {
 	})
 }
 
+func TestUpdateJobMigrationShiftsTime(t *testing.T){
+	now := time.Now()
+	recs := []Record{{Time:now,  Usage: 1e9}, {Time: now.Add(2 * time.Minute), Usage: 2e2},{Time: now.Add(4 * time.Minute), Usage: 3e3},{Time: now.Add(6 * time.Minute), Usage: 4e4}}
+	mem := &PodMemory{Name:"pod",Records:recs,StartAt:now,EndAt:now.Add(12 * time.Minute)}
+	migStartTime := now.Add(3 * time.Minute)
+	migFinishTime := migStartTime.Add(10 * time.Minute)
+	UpdateJobForMigration(mem,migStartTime,migFinishTime)
+	assert.Len(t,mem.Records,3)
+	assert.Equal(t,migFinishTime.String(),mem.Records[0].Time.String())
+	assert.Equal(t,migFinishTime.Add(1*time.Minute).String(),mem.Records[1].Time.String())
+}
+
 func TestGetFractionalGi(t *testing.T){
 	assert.Equal(t,"30Gi",getFractionalGi(30,1.))
 	assert.Equal(t,"2Gi",getFractionalGi(10,.25)) // TODO fractional cuts off decimals

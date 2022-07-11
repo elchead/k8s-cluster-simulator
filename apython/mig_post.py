@@ -4,6 +4,7 @@ from job import *
 from evaluation import *
 import matplotlib.pyplot as plt
 import sys
+from pathlib import Path
 
 args = sys.argv
 fname = "/Users/I545428/gh/controller-simulator/m-sim.log"
@@ -21,6 +22,7 @@ if len(args) > 1:
 
 title = "with migration"
 paths = get_subdirs("/Users/I545428/gh/controller-simulator/evaluation/pods_760/controller_t15_mslope")
+# [Path("/Users/I545428/gh/controller-simulator/evaluation/pods_760/controller_t15_mslope/193")]  #
 # print(paths)
 original_stdout = sys.stdout
 for i, fname in enumerate(paths):

@@ -56,6 +56,10 @@ func (c Client) GetRuntime(pod string) (int32) {
 	return c.PodRuntime[pod]
 }
 
+func (c Client) GetRuntimePercentage(pod string) (float64) {
+	return float64(c.GetExecutionTime(pod)) / float64(c.GetRuntime(pod)) * 100
+}
+
 func (c Client) GetExecutionTime(pod string) (int32) {
 	return c.PodExecution[pod]
 }

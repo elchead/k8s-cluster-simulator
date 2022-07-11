@@ -179,22 +179,25 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=Fa
     for jobname, job in jobs.items():
         if job.nbr_migrations > 0:
             fromto = [(job.get_node(n), job.get_node(n + 1)) for n in range(job.nbr_migrations)]
-            migtimes = [
-                (job.get_migration_timestamps()[i] - migtime) / job.runtime * 100
-                for i, migtime in enumerate(job.get_migration_durations())
-            ]  # executed seconds counts during migration so subtract it
-            miginfo = {
-                "name": jobname,
-                "migrations": job.nbr_migrations,
-                "size": job.get_migration_sizes(),
-                "fromto": fromto,
-                "migration_duration": Migration_durations[jobname],  # job.get_migration_duration(),
-                "migration_percentage": job.get_migration_duration() / job.runtime * 100,
-                "job_runtime": job.runtime,
-                "job_progress_percentage": migtimes,
-            }
-            migs.append(miginfo)
-            # print(json.dumps(miginfo))
+            try:
+                migtimes = [
+                    (job.get_migration_timestamps()[i] - migtime) / job.runtime * 100
+                    for i, migtime in enumerate(job.get_migration_durations())
+                ]  # executed seconds counts during migration so subtract it
+                miginfo = {
+                    "name": jobname,
+                    "migrations": job.nbr_migrations,
+                    "size": job.get_migration_sizes(),
+                    "fromto": fromto,
+                    "migration_duration": Migration_durations[jobname],  # job.get_migration_duration(),
+                    "migration_percentage": job.get_migration_duration() / job.runtime * 100,
+                    "job_runtime": job.runtime,
+                    "job_progress_percentage": migtimes,
+                }
+                migs.append(miginfo)
+            except Exception as e:
+                print("Failed to get all migrations for", job.name, e)
+                # print(vars(job), job.get_migration_durations())
 
             # OLD PRINT FORMAT
             # fromto = [f"from {job.get_node(n)} to {job.get_node(n+1)}" for n in range(job.nbr_migrations)]
