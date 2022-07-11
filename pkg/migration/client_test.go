@@ -30,11 +30,18 @@ func TestClientReturnsRuntimeAndExecutedSeconds(t *testing.T) {
 func TestMemorizer(t *testing.T){
 	sut := &migration.Memorizer[int]{MemoInterval: 3}
 	sut.Update(1)
+	// t.Run("no prior available yet", func(t *testing.T){
+	// 	assert.Nil(t,sut.Prior())
+	// })
 	sut.Update(2)
 	sut.Update(3)
 	assert.Equal(t,3,sut.Value())
 	assert.Equal(t,1,sut.Prior())
-	sut.Update(4)
+	t.Run("update slope after each step",func(t *testing.T){
+		sut.Update(4)
+		assert.Equal(t,4,sut.Value())
+		assert.Equal(t,2,sut.Prior())
+	})
 	sut.Update(5)
 	sut.Update(6)
 	assert.Equal(t,4,sut.Prior())

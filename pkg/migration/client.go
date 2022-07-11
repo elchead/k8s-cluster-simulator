@@ -13,25 +13,33 @@ import (
 
 type Memorizer[T interface{}] struct {
 	MemoInterval int
-	data T
-	prior T
-	currentStep int
+	data []T
+	CurrentStep int
 }
 
+// todo NewMemo()
+
 func (m *Memorizer[T]) Update(data T) {
-	m.data = data
-	if m.currentStep % m.MemoInterval == 0 {
-		m.prior = m.data
+	if  len(m.data) == 0 {
+		m.CurrentStep = -1
 	}
-	m.currentStep++
+	m.CurrentStep = (m.CurrentStep + 1) % m.MemoInterval
+	if len(m.data)<m.MemoInterval {
+		m.data = append(m.data, data)
+	} else {
+		m.data[m.CurrentStep] = data
+	}
 }
 
 func (m *Memorizer[T]) Value() T {
-	return m.data
+	return m.data[m.CurrentStep]
 }
 
 func (m *Memorizer[T]) Prior() T {
-	return m.prior
+	// if len(m.data) < m.MemoInterval {
+	// 	return 
+	// }
+	return m.data[(m.CurrentStep-m.MemoInterval+1+m.MemoInterval) % m.MemoInterval]
 }
 
 type Client struct {
