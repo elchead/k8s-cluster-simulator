@@ -1,3 +1,4 @@
+import pathlib
 import matplotlib.pyplot as plt
 from parsing import *
 from job import *
@@ -19,7 +20,7 @@ def get_provision_requests(file) -> List[str]:
     return res
 
 
-def evaluate_sim(title, plot, fname, nbr_jobs=50, simlog="mig-sim.log"):
+def evaluate_sim(title, plot, fname, nbr_jobs=50, simlog=pathlib.Path("mig-sim.log")):
     # print(f"Evaluate {title}")
     f = open(fname, "r")
     data, jobs = load_data(f)
@@ -31,7 +32,7 @@ def evaluate_sim(title, plot, fname, nbr_jobs=50, simlog="mig-sim.log"):
             provisions = evaluate_provisions(f)
     except Exception as e:
         print("Could not evaluate migration times", e)
-    evaluate_jobs(zones, data, jobs, title, provisions, plot=plot, nbr_jobs=nbr_jobs)
+    evaluate_jobs(zones, data, jobs, title, provisions, plot=plot, nbr_jobs=nbr_jobs, path=simlog.parent)
 
     # print("other")
     # print(jobs["o10n-worker-l-nsqcf-f2j9b"].node_data[0].memory)
@@ -123,7 +124,7 @@ class SimEvaluation:
         return list(self.job_max_mem.items())[:nbr]
 
 
-def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=False, nbr_jobs=None):
+def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=False, nbr_jobs=None, path=""):
     res = SimEvaluation()
     total_jobs = len(jobs.values())
     if not nbr_jobs:
@@ -245,7 +246,7 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=Fa
 
         t = title.replace(" ", "_")
         # plt.savefig(f"pod_mem_{t}", dpi=dpi, bbox_inches="tight")
-        plt.savefig(f"pod_mem_{t}" + ".pdf", bbox_inches="tight")
-        plt.savefig(f"pod_mem_{t}" + ".pgf", bbox_inches="tight")
+        plt.savefig(path.joinpath(f"pod_mem_{t}" + ".pdf"), bbox_inches="tight")
+        plt.savefig(path.joinpath(f"pod_mem_{t}" + ".pgf"), bbox_inches="tight")
         # plt.savefig("graph.pdf")
 

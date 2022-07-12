@@ -56,8 +56,11 @@ var requestPolicy string
 var useMigrator bool
 var nodeFreeThreshold float64
 var requestFactor float64
+var unschedulerThreshold float64
 var randSeed int64
+var memoStep int
 var noUnscheduler bool
+const minSize = 0.
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&podDataFile, "file", "./pods_760.json", "path to pod data")
@@ -69,7 +72,9 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
 	rootCmd.PersistentFlags().Float64Var(&nodeFreeThreshold, "threshold", 45., "node free threshold in % (default 45.)")
 	rootCmd.PersistentFlags().Float64Var(&requestFactor, "requestFactor", 0., "fraction of job sizing request as decimal (default 0.)")
+	rootCmd.PersistentFlags().Float64Var(&unschedulerThreshold, "unschedulerThreshold", 80, "")
 	rootCmd.PersistentFlags().Int64Var(&randSeed, "seed", 0, "random seed (default 0)")
+	rootCmd.PersistentFlags().IntVar(&memoStep, "memoStep",2, "memostep in min")
 }
 
 var rootCmd = &cobra.Command{
@@ -90,7 +95,7 @@ var rootCmd = &cobra.Command{
 		// 1. Create a KubeSim with a pod queue and a scheduler.
 		queue := queue.NewPriorityQueue()
 		sched := buildScheduler() // see below
-		metricClient := migration.NewClient()
+		metricClient := migration.NewClientWithMemoStep(memoStep)
 
 		conf, err := kubesim.ReadConfig(configPath)
 		if useMigrator {
@@ -130,13 +135,15 @@ var rootCmd = &cobra.Command{
 			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
 			requestPolicy := monitoring.NewRequestPolicy(requestPolicy, cluster, metricClient,nodeFreeThreshold)
 			migrationPolicy := monitoring.NewMigrationPolicy(migPolicy,cluster,metricClient)
-			migController := monitoring.NewController(requestPolicy, migrationPolicy)
+			migController := monitoring.NewControllerWithMinSize(requestPolicy, migrationPolicy,minSize)
 			checker := monitoring.NewMigrationChecker(checkerType)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory,checker))
-			if !noUnscheduler {
-				unscheduler := &migration.Unscheduler{EndTime:clock.NewClock(endTime),ThresholdDecimal: .8,ReschedulableDistanceDecimal:.15}
-				sim.AddSubmitter("NodeUnscheduler", unscheduler)
-			}
+		}
+		if !noUnscheduler {
+			unschedDecimal := 1 - unschedulerThreshold/100.
+			fmt.Println("unschedDecimal",unschedDecimal)
+			unscheduler := &migration.Unscheduler{EndTime:clock.NewClock(endTime),ThresholdDecimal:unschedDecimal,ReschedulableDistanceDecimal:.15}
+			sim.AddSubmitter("NodeUnscheduler", unscheduler)
 		}
 		sim.AddSubmitter("JobDeleter", jobparser.NewJobDeleterWithEndtime(jobs, endTime))
 		// 3. Run the main loop of KubeSim.
