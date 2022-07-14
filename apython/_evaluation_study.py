@@ -1,10 +1,12 @@
 from read_reports import *
 import numpy as np
+from matplotlib import pyplot as plt
 
 path = "/Users/I545428/gh/controller-simulator/evaluation/pods_760"
 path2 = "/Users/I545428/gh/controller-simulator/evaluation/pods_2715"
 
 jobs = [760, 2715]
+scenarios = {760: "Scenario 1", 2715: "Scenario 2"}
 jobseeds = [12, 15]
 # ! Job analysis
 # pd = evaluate_tables(path, 8)
@@ -87,28 +89,50 @@ def controller_rate(job, nbrJobs):
     print(f"Controller rate: {count_failure} failures out of {len(maxs)}; {count_failure/len(maxs)*100}")
 
 
-def reqfac_impact(job):
+def reqfac_impact(job, seeds=20):
     print("Job", job)
-    for thresh in [0, 0.1, 0.25, 0.5, 0.75]:  # , 0.005]:
+    threshs = [0, 0.1, 0.25, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    failure_rates = []
+    jobtimes = []
+    for thresh in threshs:  # [0, 0.1, 0.25, 0.5, 0.75]:  # , 0.005]:
         seed_path = f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/reqfac/p{thresh}"
-        pd = evaluate_req_tables(seed_path, 20)
+        pd = evaluate_req_tables(seed_path, seeds)
         count_failure = 0
         maxs = pd.loc[:, "Max node usage [Gb]"]
         for d in maxs:
             if d > 450:
                 count_failure += 1
-        jtime = min(pd.loc[:, "Job time"])
+        jtime = min(pd.loc[:, "Job time"]) / 3600.0
+        rate = count_failure / len(maxs) * 100
+        failure_rates.append(rate)
+        jobtimes.append(jtime)
+
         print(
-            f"Request factor {thresh}: {count_failure} failures out of {len(maxs)}\t minimal jobtime: {jtime}; {count_failure/len(maxs)*100}"
+            f"Request factor {thresh}: {count_failure} failures out of {len(maxs)}\t minimal jobtime: {jtime}; {rate}"
         )
+    # fig, axs = plt.subplots(nrows=2)
+    # fig.suptitle(scenarios[job])
+
+    plt.figure()
+    plt.title(scenarios[job])
+    plt.plot(threshs, failure_rates)
+    plt.ylabel("Failure rate [%]")
+    plt.xlabel("Job request factor")
+    plt.figure()
+    plt.title(scenarios[job])
+    plt.xlabel("Job request factor")
+    plt.ylabel("Minimal total job time [h]")
+    plt.plot(threshs, jobtimes)
 
 
 # reqfac_impact(2715)
 
 # controller config
 job = jobs[0]
-unscheduler_impact(job, seeds=100)
-# reqfac_impact(job)
+# unscheduler_impact(job, seeds=200)
+reqfac_impact(job, seeds=100)
+reqfac_impact(jobs[1], seeds=100)
+
 # run combi (unscheduler included in main?)
 # pick one failed scenario from:
 # nomig_dynamic_failure_rate(job, 500)
@@ -146,3 +170,4 @@ seed = jobseeds[0]
 # print("ONLY", job)
 # pd = evaluate_tables(f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/onlycontroller", seed)
 # print_table(pd)
+plt.show()

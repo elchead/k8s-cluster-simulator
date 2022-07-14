@@ -72,7 +72,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&useMigrator, "useMigrator", false, "use migrator (default false)")
 	rootCmd.PersistentFlags().Float64Var(&nodeFreeThreshold, "threshold", 45., "node free threshold in % (default 45.)")
 	rootCmd.PersistentFlags().Float64Var(&requestFactor, "requestFactor", 0., "fraction of job sizing request as decimal (default 0.)")
-	rootCmd.PersistentFlags().Float64Var(&unschedulerThreshold, "unschedulerThreshold", 80, "")
+	rootCmd.PersistentFlags().Float64Var(&unschedulerThreshold, "unschedulerThreshold", 20, "denotes free threshold")
 	rootCmd.PersistentFlags().Int64Var(&randSeed, "seed", 0, "random seed (default 0)")
 	rootCmd.PersistentFlags().IntVar(&memoStep, "memoStep",2, "memostep in min")
 }
@@ -140,7 +140,7 @@ var rootCmd = &cobra.Command{
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory,checker))
 		}
 		if !noUnscheduler {
-			unschedDecimal := 1 - unschedulerThreshold/100.
+			unschedDecimal := 1- unschedulerThreshold/100.
 			fmt.Println("unschedDecimal",unschedDecimal)
 			unscheduler := &migration.Unscheduler{EndTime:clock.NewClock(endTime),ThresholdDecimal:unschedDecimal,ReschedulableDistanceDecimal:.15}
 			sim.AddSubmitter("NodeUnscheduler", unscheduler)
