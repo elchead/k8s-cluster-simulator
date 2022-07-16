@@ -106,10 +106,9 @@ def evaluate_seed_tables_no_config(path, seedmax):
             strdata = f.read()
             try:
                 res = read_to_panda(strdata, seed)
+                pd = pandas.concat([pd, res])
             except Exception as e:
                 print(e, "seed", seed, "failed", fpath)
-                res
-            pd = pandas.concat([pd, res])
     # print_table(pd)
     return pd
 

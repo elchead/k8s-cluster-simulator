@@ -1,6 +1,14 @@
 from read_reports import *
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib
+
+latex = True
+if latex:
+    matplotlib.use("pgf")
+    matplotlib.rcParams.update(
+        {"pgf.texsystem": "pdflatex", "font.family": "serif", "text.usetex": True, "pgf.rcfonts": False,}
+    )
 
 path = "/Users/I545428/gh/controller-simulator/evaluation/pods_760"
 path2 = "/Users/I545428/gh/controller-simulator/evaluation/pods_2715"
@@ -16,7 +24,8 @@ jobseeds = [12, 15]
 def unscheduler_impact(job, seeds=20):
     print("Job", job)
     failrates = {}
-    for thresh in [0, 10, 20, 30]:
+    jtimes = []
+    for thresh in [0]:
         seed_path = f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/unscheduler/t{thresh}"  # -m-big-enough-r-threshold"
         pd = evaluate_seed_tables_no_config(seed_path, seeds)
         count_failure = 0
@@ -26,8 +35,14 @@ def unscheduler_impact(job, seeds=20):
                 count_failure += 1
         print(f"Threshold {thresh}: {count_failure} failures out of {len(maxs)}")
         failrates[thresh] = count_failure / len(maxs) * 100
+        jtime = min(pd.loc[:, "Job time"]) / 3600.0
+        print(pd.loc[:, "Job time"][199:])
+        jtimes.append(jtime)
+    jtimes = np.array(jtimes) / jtimes[0] * 100
+    # print(jtimes)
     pf = pandas.DataFrame.from_dict(failrates, orient="index")
     pf.columns = ["Failure rate [%]"]
+    pf.insert(1, "Relative total job time [%]", jtimes)
     print(pf)
     print(pf.to_latex())
 
@@ -54,11 +69,15 @@ def nomig_dynamic_failure_rate(job, nbrJobs):
 def combi_req_unsched_rate(job, nbrJobs):
     print("Job", job)
     # for thresh in range(1, nbrJobs + 1):
-    seed_path = f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/combi_req_unsched"
+    seed_path = f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/combi_req_unsched"  # _r0.25"
     pd = evaluate_seed_tables_no_config(seed_path, nbrJobs)
+    jtime = min(pd.loc[:, "Job time"]) / 3600.0
+    print("Combined job time", jtime)
+    # pf.insert(1, "Relative total job time [%]", jtimes)
     count_failure = 0
     failed_seeds = []
     maxs = pd.loc[:, "Max node usage [Gb]"]
+    jtimes = []
     for d in maxs:
         if d >= 450:
             count_failure += 1
@@ -73,7 +92,7 @@ def combi_req_unsched_rate(job, nbrJobs):
 def controller_rate(job, nbrJobs):
     print("Job", job)
     # for thresh in range(1, nbrJobs + 1):
-    seed_path = f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/controller_t15_mslope"
+    seed_path = f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/controller_t15_mslope_r0.25"
     pd = evaluate_seed_tables_no_config(seed_path, nbrJobs)
     count_failure = 0
     failed_seeds = []
@@ -110,28 +129,41 @@ def reqfac_impact(job, seeds=20):
         print(
             f"Request factor {thresh}: {count_failure} failures out of {len(maxs)}\t minimal jobtime: {jtime}; {rate}"
         )
-    # fig, axs = plt.subplots(nrows=2)
-    # fig.suptitle(scenarios[job])
+    jobtimes = np.array(jobtimes) / jobtimes[0] * 100
+    return threshs, failure_rates, jobtimes
 
-    plt.figure()
-    plt.title(scenarios[job])
-    plt.plot(threshs, failure_rates)
-    plt.ylabel("Failure rate [%]")
-    plt.xlabel("Job request factor")
-    plt.figure()
-    plt.title(scenarios[job])
-    plt.xlabel("Job request factor")
-    plt.ylabel("Minimal total job time [h]")
-    plt.plot(threshs, jobtimes)
-
-
-# reqfac_impact(2715)
 
 # controller config
-job = jobs[0]
-# unscheduler_impact(job, seeds=200)
+job = jobs[1]
 reqfac_impact(job, seeds=100)
-reqfac_impact(jobs[1], seeds=100)
+unscheduler_impact(job, seeds=310)
+# job = jobs[0]
+# reqfac_impact(job, seeds=100)
+# unscheduler_impact(job, seeds=100)
+# # unscheduler_impact(jobs[1], seeds=200)
+
+# ## failure rate PLOT
+# plt.figure()
+# threshs, failure_rates, jobtimes = reqfac_impact(job, seeds=200)
+# threshs, failure_rates2, jobtimes2 = reqfac_impact(jobs[1], seeds=100)
+# plt.ylabel("Failure rate [%]")
+# plt.xlabel("Job request factor")
+# plt.plot(threshs, failure_rates, label=scenarios[jobs[0]])
+# plt.plot(threshs, failure_rates2, label=scenarios[jobs[1]])
+# plt.legend()
+# plt.savefig("failure_request_factorN")
+# plt.savefig("failure_request_factorN.pgf")
+
+# ## jobtime rate PLOT
+# plt.figure()
+# plt.xlabel("Job request factor")
+# plt.ylabel("Relative total job time [%]")
+# plt.plot(threshs, jobtimes, label=scenarios[jobs[0]])
+# plt.plot(threshs, jobtimes2, label=scenarios[jobs[1]])
+# plt.legend()
+# plt.savefig("jobtime_request_factor")
+# plt.savefig("jobtime_request_factor.pgf")
+
 
 # run combi (unscheduler included in main?)
 # pick one failed scenario from:
