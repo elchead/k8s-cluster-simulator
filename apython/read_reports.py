@@ -12,15 +12,23 @@ def read_to_panda(strdata, config_name):
     subd = {
         key: d[key]
         for key in d.keys()
-        if key not in ["zone_mean_usage_gb", "zone_max_usage_gb", "provisions", "most_consuming_jobs", "migrated_pods",]
+        if key
+        not in [
+            "zone_mean_usage_gb",
+            "zone_max_usage_gb",
+            "provisions",
+            "most_consuming_jobs",
+            "migrated_pods",
+            "total_job_time",
+        ]
     }
 
-    pd = pandas.DataFrame(subd, [config_name])
+    pd = pandas.DataFrame(subd, [str(config_name) + "%"])
     pd.columns = [
         "Job count",
         "Migration count",
         "Job time",
-        "Migration time",
+        "Migration time [s]",
         "Mean memory usage [Gb]",
         "Mean memory usage [%]",
         "Provision count",
@@ -65,11 +73,11 @@ def evaluate_tables(path, seed):
             threshold = int(configls[0][1:])
             try:
                 res = read_to_panda(strdata, threshold)
-            except:
-                print("SEED", seed, "failed", config)
+                key = f"Requester:{req}; Migrator:{mig}"
+                pd[key] = pandas.concat([pd[key], res])
+            except Exception as e:
+                print("SEED", seed, "failed", config, e)
 
-            key = f"Requester:{req}; Migrator:{mig}"
-            pd[key] = pandas.concat([pd[key], res])
     return pd
 
 

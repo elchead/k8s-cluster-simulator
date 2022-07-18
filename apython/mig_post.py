@@ -21,14 +21,21 @@ if len(args) > 1:
     plot = True
 
 title = "with migration"
-paths = get_subdirs("/Users/I545428/gh/controller-simulator/evaluation/pods_760/controller_t15_mslope")
+paths = get_subdirs("/Users/I545428/gh/controller-simulator/evaluation/pods_760/controller_7_7")
+# npaths = []
+# for p in paths:
+#     for fail in ["/41", "/74", "/96", "/246", "/362", "/418", "/459"]:
+#         if str(p).endswith(fail):
+#             npaths.append(p)
+# paths = npaths
+plot = True
 # [Path("/Users/I545428/gh/controller-simulator/evaluation/pods_760/controller_t15_mslope/193")]  #
 # print(paths)
 original_stdout = sys.stdout
 for i, fname in enumerate(paths):
-    with open(fname.joinpath("mig-report.txt"), "w") as f:
+    with open(fname.joinpath("12/mig-report.txt"), "w") as f:
         sys.stdout = f
-        evaluate_sim(title, plot, fname.joinpath("mig-sim-json.log"), simlog=fname.joinpath("mig-sim.log"))
+        evaluate_sim(title, plot, fname.joinpath("12/mig-sim-json.log"), simlog=fname.joinpath("12/mig-sim.log"))
     sys.stdout = original_stdout
     print(i, fname.stem)
 # plt.show()

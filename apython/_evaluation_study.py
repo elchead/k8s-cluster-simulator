@@ -10,22 +10,19 @@ if latex:
         {"pgf.texsystem": "pdflatex", "font.family": "serif", "text.usetex": True, "pgf.rcfonts": False,}
     )
 
-path = "/Users/I545428/gh/controller-simulator/evaluation/pods_760"
+path = "/Users/I545428/gh/controller-simulator/evaluation/pods_760/controller_7_18"
 path2 = "/Users/I545428/gh/controller-simulator/evaluation/pods_2715"
 
 jobs = [760, 2715]
 scenarios = {760: "Scenario 1", 2715: "Scenario 2"}
 jobseeds = [12, 15]
-# ! Job analysis
-# pd = evaluate_tables(path, 8)
-# pd = evaluate_tables(path2, 16)
 
 # ! Unscheduler impact
 def unscheduler_impact(job, seeds=20):
     print("Job", job)
     failrates = {}
     jtimes = []
-    for thresh in [0]:
+    for thresh in [0, 10, 15, 20, 30]:
         seed_path = f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/unscheduler/t{thresh}"  # -m-big-enough-r-threshold"
         pd = evaluate_seed_tables_no_config(seed_path, seeds)
         count_failure = 0
@@ -110,7 +107,7 @@ def controller_rate(job, nbrJobs):
 
 def reqfac_impact(job, seeds=20):
     print("Job", job)
-    threshs = [0, 0.1, 0.25, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    threshs = [0, 1.0]  # [0, 0.1, 0.25, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     failure_rates = []
     jobtimes = []
     for thresh in threshs:  # [0, 0.1, 0.25, 0.5, 0.75]:  # , 0.005]:
@@ -130,13 +127,14 @@ def reqfac_impact(job, seeds=20):
             f"Request factor {thresh}: {count_failure} failures out of {len(maxs)}\t minimal jobtime: {jtime}; {rate}"
         )
     jobtimes = np.array(jobtimes) / jobtimes[0] * 100
+    print(jobtimes)
     return threshs, failure_rates, jobtimes
 
 
 # controller config
 job = jobs[1]
-reqfac_impact(job, seeds=100)
-unscheduler_impact(job, seeds=310)
+# reqfac_impact(job, seeds=500)
+# unscheduler_impact(job, seeds=500)
 # job = jobs[0]
 # reqfac_impact(job, seeds=100)
 # unscheduler_impact(job, seeds=100)
@@ -185,19 +183,28 @@ seed = jobseeds[0]
 # pd["Max node usage [Gb]"] >
 
 
-# job = 760
-# seed = 12  # changed from 19 to 12
+job = jobs[1]
+seed = jobseeds[1]  # changed from 19 to 12
 # print("---", job)
-# pd = evaluate_tables(f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/controller_7_7", seed)
+pd = evaluate_tables(f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/controller_7_18", seed)
+for name, value in pd.items():
+    del value["Job count"]
+    del value["Job time"]
+    del value["Mean memory usage [Gb]"]
+    del value["Mean memory usage [%]"]
+    # del value["Provision count"]
+    # print(name)
+    ls = name.strip(" ").split(";")
+    req = ls[0].split(":")[1]
+    mig = ls[1].split(":")[1]
+    value.sort_index(inplace=True)
+    print(
+        value.to_latex(
+            caption=f"{scenarios[job]}: Varying thresholds with {req} requester and {mig} migrator",
+            label=f"param_job_r_{req}_m_{mig}",
+        )
+    )
 # print_table(pd)
-# # for name, value in pd.items():
-# #     del value["Job count"]
-# #     del value["Job time"]
-# #     del value["Mean memory usage [Gb]"]
-# #     del value["Mean memory usage [%]"]
-# #     del value["Provision count"]
-# #     print(name)
-# #     print(value.to_latex())
 
 # print("ONLY", job)
 # pd = evaluate_tables(f"/Users/I545428/gh/controller-simulator/evaluation/pods_{job}/onlycontroller", seed)
