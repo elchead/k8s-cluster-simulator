@@ -60,6 +60,7 @@ var unschedulerThreshold float64
 var randSeed int64
 var memoStep int
 var noUnscheduler bool
+var filterShortJobs bool
 const minSize = 0.
 
 func init() {
@@ -75,6 +76,17 @@ func init() {
 	rootCmd.PersistentFlags().Float64Var(&unschedulerThreshold, "unschedulerThreshold", 20, "denotes free threshold")
 	rootCmd.PersistentFlags().Int64Var(&randSeed, "seed", 0, "random seed (default 0)")
 	rootCmd.PersistentFlags().IntVar(&memoStep, "memoStep",2, "memostep in min")
+	rootCmd.PersistentFlags().BoolVar(&filterShortJobs, "noShortJobs",true, "do not migrate short jobs with short remaining runtime")
+}
+
+
+
+func GetControllerClient(filterShortJobs bool,rawClient *migration.Client) (monitoring.Clienter) {
+	if filterShortJobs {
+		return monitoring.FilteredClient{rawClient}
+	} else {
+		return rawClient
+	}
 }
 
 var rootCmd = &cobra.Command{
@@ -84,19 +96,14 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("reqFactor",requestFactor)
 		fmt.Println("unschedulerThreshold",unschedulerThreshold)
-
-		// if useMigrator {
-		// 	requestFactor = 0. // much more usage when no resource set at all! //.1 //.25 too big?
-		// } else {
-		// 	requestFactor = 1. 
-		// }
 		rand.Seed(randSeed)
 
 		ctx := newInterruptableContext()
 		// 1. Create a KubeSim with a pod queue and a scheduler.
 		queue := queue.NewPriorityQueue()
 		sched := buildScheduler() // see below
-		metricClient := migration.NewClientWithMemoStep(memoStep)
+
+
 
 		conf, err := kubesim.ReadConfig(configPath)
 		if useMigrator {
@@ -110,8 +117,9 @@ var rootCmd = &cobra.Command{
 		simDuration,ok := simDurationMap[podDataFile]
 		if !ok {
 			log.L.Fatal("Failed to find sim duration for file:", podDataFile)
-		}
-		sim,_ := kubesim.NewKubeSim(conf, queue, sched,metricClient)
+		} 
+		simClient := migration.NewClientWithMemoStep(memoStep)
+		sim,_ := kubesim.NewKubeSim(conf, queue, sched,simClient)
 		startTime, _ := time.Parse(time.RFC3339, conf.StartClock)
 		endTime := startTime.Add(simDuration)
 
@@ -128,14 +136,15 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.L.Fatal("Failed to parse jobs", err)
 		}
-		podFactory := jobparser.NewPodFactory(requestFactor) //jobparser.PodFactory{SetResources: !useMigrator}
+		podFactory := jobparser.NewPodFactory(requestFactor)
 		submitter := jobparser.NewJobSubmitterWithFactory(jobs,podFactory)
 		sim.AddSubmitter("JobSubmitter", submitter)
 		if useMigrator {
 			log.L.Info("Setting migration threshold:",nodeFreeThreshold, "% ",  nodeFreeThreshold/100.)
+			client := GetControllerClient(filterShortJobs,simClient)
 			cluster := monitoring.NewClusterWithSize(getNodeSize(conf))
-			requestPolicy := monitoring.NewRequestPolicy(requestPolicy, cluster, metricClient,nodeFreeThreshold)
-			migrationPolicy := monitoring.NewMigrationPolicy(migPolicy,cluster,metricClient)
+			requestPolicy := monitoring.NewRequestPolicy(requestPolicy, cluster, client,nodeFreeThreshold)
+			migrationPolicy := monitoring.NewMigrationPolicy(migPolicy,cluster,client)
 			migController := monitoring.NewControllerWithMinSize(requestPolicy, migrationPolicy,minSize)
 			checker := monitoring.NewMigrationChecker(checkerType)
 			sim.AddSubmitter("JobMigrator", migration.NewSubmitterWithJobsWithEndTimeFactory(migController,jobs,endTime,podFactory,checker))

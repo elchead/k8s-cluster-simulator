@@ -10,6 +10,12 @@ import (
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 )
 
+// type SimClienter interface {
+// 	monitoring.Clienter
+// 	UpdateNodeMetrics(metrics map[string]node.Metrics)
+// 	UpdatePodMetrics(pods map[string]pod.Metrics)
+// }
+
 
 type Memorizer[T interface{}] struct {
 	MemoInterval int
