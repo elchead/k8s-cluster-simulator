@@ -30,9 +30,9 @@ func TestClientReturnsRuntimeAndExecutedSeconds(t *testing.T) {
 func TestMemorizer(t *testing.T){
 	sut := &migration.Memorizer[int]{MemoInterval: 3}
 	sut.Update(1)
-	// t.Run("no prior available yet", func(t *testing.T){
-	// 	assert.Nil(t,sut.Prior())
-	// })
+	t.Run("return default when no prior available yet", func(t *testing.T){
+		assert.Empty(t,sut.Prior())
+	})
 	sut.Update(2)
 	sut.Update(3)
 	assert.Equal(t,3,sut.Value())
@@ -65,6 +65,11 @@ func TestMemorizerWithPodMemMap(t *testing.T){
 func TestGetSlope(t *testing.T) {
 	sut := migration.NewClientWithMemoStep(3)
 
+	t.Run("no slope when no prior data available", func(t *testing.T){
+		noRes, err := sut.GetPodMemorySlope("zone2","worker2","now","1m")
+		assert.Error(t, err)
+		assert.Equal(t,-1.,noRes)
+	})
 	podmetrics := map[string]pod.Metrics{"worker":{Node:"zone3",ResourceUsage:createMemoryResource(50.)}}
 	sut.UpdatePodMetrics(podmetrics)
 	podmetrics = map[string]pod.Metrics{"worker":{Node:"zone3",ResourceUsage:createMemoryResource(75.)}}

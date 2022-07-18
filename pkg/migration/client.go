@@ -17,8 +17,6 @@ type Memorizer[T interface{}] struct {
 	CurrentStep int
 }
 
-// todo NewMemo()
-
 func (m *Memorizer[T]) Update(data T) {
 	if  len(m.data) == 0 {
 		m.CurrentStep = -1
@@ -32,13 +30,18 @@ func (m *Memorizer[T]) Update(data T) {
 }
 
 func (m *Memorizer[T]) Value() T {
+	if  len(m.data) == 0 {
+		var defaultVal T
+		return defaultVal
+	}
 	return m.data[m.CurrentStep]
 }
 
 func (m *Memorizer[T]) Prior() T {
-	// if len(m.data) < m.MemoInterval {
-	// 	return 
-	// }
+	if len(m.data) < m.MemoInterval {
+		var defaultVal T
+		return defaultVal
+	}
 	return m.data[(m.CurrentStep-m.MemoInterval+1+m.MemoInterval) % m.MemoInterval]
 }
 
@@ -100,12 +103,17 @@ func (c *Client) updateMemorizer() {
 }
 
 func (c Client) GetPodMemorySlope(node, name, time, slopeWindow string) (float64, error) {
-	val,ok := c.PodMemorizer[node].Value()[name]
-	pval,pok := c.PodMemorizer[node].Prior()[name]
-	if !ok || !pok {
+	mem,mok := c.PodMemorizer[node]
+	if mok {
+		val, vok := mem.Value()[name]
+		pval,pok := c.PodMemorizer[node].Prior()[name]
+		if !vok || !pok {
+			return -1., errors.New("could not get pod memory for node " +name)
+		}
+		return val - pval,nil
+	} else {
 		return -1., errors.New("could not get pod memory for node " +name)
 	}
-	return val - pval,nil
 }
 
 // in Gb
