@@ -29,9 +29,10 @@ def evaluate_sim(title, plot, fname, nbr_jobs=50, simlog=pathlib.Path("mig-sim.l
     try:
         with open(simlog) as f:
             set_migration_times(f)
+            f.seek(0)
             provisions = evaluate_provisions(f)
     except Exception as e:
-        print("Could not evaluate migration times", e)
+        print("Could not evaluate migration", e)
     evaluate_jobs(zones, data, jobs, title, provisions, plot=plot, nbr_jobs=nbr_jobs, path=simlog.parent)
 
     # print("other")
@@ -157,6 +158,7 @@ def evaluate_jobs(zones, data, jobs: "dict[str,Job]", title, provisions, plot=Fa
         "total_jobs": total_jobs,
         "nbr_migrations": res.total_migrations(),
         "job_time": res.job_time(),
+        "total_job_time": res.total_job_time,
         "migration_time": res.migration_time(),
         "mean_memory_usage_gb": memmean,
         "mean_memory_usage_perc": memmean / 450 * 100,
