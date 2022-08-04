@@ -29,10 +29,10 @@ def read_to_panda(strdata, config_name):
         "Migration count",
         "Job time",
         "Migration time [s]",
-        "Mean memory usage [Gb]",
+        "Mean memory usage [GB]",
         "Mean memory usage [%]",
         "Provision count",
-        "Max node usage [Gb]",
+        "Max node usage [GB]",
     ]
 
     return pd

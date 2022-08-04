@@ -190,18 +190,21 @@ pd = evaluate_tables(f"/Users/I545428/gh/controller-simulator/evaluation/pods_{j
 for name, value in pd.items():
     del value["Job count"]
     del value["Job time"]
-    del value["Mean memory usage [Gb]"]
+    del value["Mean memory usage [GB]"]
     del value["Mean memory usage [%]"]
     # del value["Provision count"]
     # print(name)
     ls = name.strip(" ").split(";")
     req = ls[0].split(":")[1]
     mig = ls[1].split(":")[1]
+    if mig == "optimal":
+        mig = "Knapsack"
     value.sort_index(inplace=True)
+    # value.drop(["15%"], axis=0, inplace=True)
     print(
         value.to_latex(
             caption=f"{scenarios[job]}: Varying thresholds with {req} requester and {mig} migrator",
-            label=f"param_job_r_{req}_m_{mig}",
+            label=f"{job}_param_job_r_{req}_m_{mig}",
         )
     )
 # print_table(pd)
