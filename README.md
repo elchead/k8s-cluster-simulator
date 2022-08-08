@@ -1,3 +1,40 @@
+# Pod migration extension
+
+This fork extends the simulator to read in metric data from a telemetry agent, such as Dynatrace, and allows to simulate pod migration by assuming an empirical, linear migration downtime to memory size relationship with a throughput rate of about 1.5 GB/s. It is part of a research project to investigate the feasibility of speculative scheduling of long-running stateful jos with unknown resource requirements in Kubernetes.
+
+The aim is to reproduce real cluster load scenarios and investigate different migration strategies of the developed migration controller, which can be found [here](https://github.com/elchead/k8s-migration-controller).
+
+## Setup
+
+In order to use the migration controller in the simulator, the corresponding code repo should be linked to the simulator. A Go workspace, here called `controller-simulator`, make this easy (also see [here](https://go.dev/doc/tutorial/workspaces)):
+
+```
+go work init ./controller-simulator
+go mod init github.com/elchead/k8s-cluster-simulator
+go mod vendor
+go work use ./k8s-cluster-simulator
+go mod init github.com/elchead/k8s-migration-controller
+go work use github.com/elchead/k8s-migration-controller
+```
+
+## Pod data preparation
+
+Dynatrace only allows to export all metric data through its developer API at the moment.
+The `/metrics/query` endpoint with the following query provides the memory from 2000 pod workers:
+`builtin:containers.memory.residentSetBytes:filter(and(eq(Container,worker))):splitBy("dt.entity.container_group_instance",Container):avg:auto:sort(value(avg,descending)):limit(2000)`
+
+In order to map these entities to the pod names, another query to the `metrics/entity` endpoint is necessary with `type("CONTAINER_GROUP_INSTANCE")`.
+
+The script `./apython/json_creator.py` then merges the 2 JSON file results into a single JSON file that can be processed by the simulator.
+
+In order to start the simulator with this data in `./example/main.go`, `--file` needs to be provided and a simulation duration needs to be added to the global variable `simDurationMap`.
+Lastly, the `config.yaml` should be adjusted to the start time of the metric data.
+
+Then the simulator can be launched using:
+`go run github.com/elchead/k8s-cluster-simulator/example --config config --file $FILE` (example includes the migration controller).
+
+---
+
 # Kubernetes cluster simulator
 
 [![GoDoc][godoc-image]][godoc-link]
@@ -331,14 +368,13 @@ Moreover, functions in the following files were obtained from Kubernetes project
 that they would be compatible with k8s-cluster-simulator.
 Please see each file for more detail.
 
-* [pkg/scheduler/generic_scheduler_k8s.go](pkg/scheduler/generic_scheduler_k8s.go)
-* [pkg/queue/priority_queue_k8s.go](pkg/queue/priority_queue_k8s.go)
-* [pkg/util/util_k8s.go](pkg/util/util_k8s.go)
-
+- [pkg/scheduler/generic_scheduler_k8s.go](pkg/scheduler/generic_scheduler_k8s.go)
+- [pkg/queue/priority_queue_k8s.go](pkg/queue/priority_queue_k8s.go)
+- [pkg/util/util_k8s.go](pkg/util/util_k8s.go)
 
 [build-image]: https://travis-ci.com/pfnet-research/k8s-cluster-simulator.svg
-[build-link]:  http://travis-ci.com/pfnet-research/k8s-cluster-simulator
-[cov-image]:   https://coveralls.io/repos/github/pfnet-research/k8s-cluster-simulator/badge.svg?branch=master
-[cov-link]:    https://coveralls.io/github/pfnet-research/k8s-cluster-simulator?branch=master
+[build-link]: http://travis-ci.com/pfnet-research/k8s-cluster-simulator
+[cov-image]: https://coveralls.io/repos/github/pfnet-research/k8s-cluster-simulator/badge.svg?branch=master
+[cov-link]: https://coveralls.io/github/pfnet-research/k8s-cluster-simulator?branch=master
 [godoc-image]: https://godoc.org/github.com/elchead/k8s-cluster-simulator/pkg?status.svg
-[godoc-link]:  https://godoc.org/github.com/elchead/k8s-cluster-simulator/pkg
+[godoc-link]: https://godoc.org/github.com/elchead/k8s-cluster-simulator/pkg
